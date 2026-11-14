@@ -1,58 +1,65 @@
-export type Account = { id: number; name: string; email: string; token: string };
+import { createClient, type User } from "@supabase/supabase-js";
 
-const API = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ?? "";
-const KEY = "terrashift-account";
+const url = import.meta.env.VITE_SUPABASE_URL;
+const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export function savedAccount(): Account | null {
-  const raw = localStorage.getItem(KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as Account;
-  } catch {
-    return null;
+export const supabase = url && key ? createClient(url, key) : null;
+
+export type Account = { id: string; name: string; email: string };
+
+function toAccount(user: User): Account {
+  const meta = user.user_metadata as { name?: string };
+  return {
+    id: user.id,
+    name: meta.name || user.email?.split("@")[0] || "Compte",
+    email: user.email ?? "",
+  };
+}
+
+function requireClient() {
+  if (!supabase) {
+    throw new Error("Supabase n’est pas configuré. Ajoute VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans frontend/.env.local.");
   }
+  return supabase;
 }
 
-export function saveAccount(account: Account | null) {
-  if (account) localStorage.setItem(KEY, JSON.stringify(account));
-  else localStorage.removeItem(KEY);
+function explain(message: string): string {
+  const text = message.toLowerCase();
+  if (text.includes("invalid login") || text.includes("invalid credentials")) return "E-mail ou mot de passe incorrect.";
+  if (text.includes("already registered") || text.includes("already been registered")) return "Un compte existe déjà avec cet e-mail.";
+  if (text.includes("password")) return "Mot de passe refusé. Utilise au moins 8 caractères.";
+  if (text.includes("email not confirmed")) return "Confirme d’abord l’e-mail, puis reconnecte-toi.";
+  return message || "Compte refusé.";
 }
 
-async function post(path: string, body: unknown): Promise<Account> {
-  let response: Response;
-  try {
-    response = await fetch(`${API}${path}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new Error("Le serveur de comptes ne répond pas. Lance TerraShift avec run.bat.");
+export async function register(name: string, email: string, password: string): Promise<Account> {
+  const client = requireClient();
+  const { data, error } = await client.auth.signUp({
+    email,
+    password,
+    options: { data: { name } },
+  });
+  if (error) throw new Error(explain(error.message));
+  if (!data.user || !data.session) {
+    throw new Error("Compte créé. Ouvre le mail de confirmation, puis connecte-toi. Dans Supabase, Authentication → Providers → Email, tu peux décocher Confirm email pour entrer tout de suite.");
   }
-  if (!response.ok) {
-    let detail = "Compte refusé";
-    try {
-      const payload = await response.json();
-      detail = payload.detail || detail;
-    } catch {
-      detail = response.status === 404 ? "Le serveur de comptes ne répond pas. Lance TerraShift avec run.bat." : detail;
-    }
-    throw new Error(typeof detail === "string" ? detail : "Compte refusé");
-  }
-  return response.json();
+  return toAccount(data.user);
 }
 
-export function register(name: string, email: string, password: string) {
-  return post("/api/auth/register", { name, email, password });
+export async function login(email: string, password: string): Promise<Account> {
+  const client = requireClient();
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw new Error(explain(error.message));
+  if (!data.user) throw new Error("Connexion impossible.");
+  return toAccount(data.user);
 }
 
-export function login(email: string, password: string) {
-  return post("/api/auth/login", { email, password });
+export async function currentAccount(): Promise<Account | null> {
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user ? toAccount(data.session.user) : null;
 }
 
-export async function currentAccount(token: string): Promise<Account> {
-  const response = await fetch(`${API}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-  if (!response.ok) throw new Error("session");
-  const user = await response.json();
-  return { ...user, token };
+export async function logout() {
+  if (supabase) await supabase.auth.signOut();
 }

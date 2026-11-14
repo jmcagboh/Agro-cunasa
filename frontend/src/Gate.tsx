@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import App from "./App";
-import { Account, currentAccount, login, register, saveAccount, savedAccount } from "./auth";
+import { Account, currentAccount, login, logout, register } from "./auth";
 
 type Screen = "home" | "login" | "register";
 
@@ -33,19 +33,12 @@ export default function Gate() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const stored = savedAccount();
-    if (!stored) {
-      setReady(true);
-      return;
-    }
-    currentAccount(stored.token)
+    currentAccount()
       .then((user) => setAccount(user))
-      .catch(() => saveAccount(null))
       .finally(() => setReady(true));
   }, []);
 
   function enter(next: Account) {
-    saveAccount(next);
     setAccount(next);
     setPassword("");
     setError("");
@@ -72,7 +65,7 @@ export default function Gate() {
   }
 
   if (account) {
-    return <App user={account} onLogout={() => { saveAccount(null); setAccount(null); setScreen("home"); }} />;
+    return <App user={account} onLogout={() => { void logout().finally(() => { setAccount(null); setScreen("home"); }); }} />;
   }
 
   return (

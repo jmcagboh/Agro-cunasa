@@ -12,7 +12,7 @@ Ouvrir le site, choisir un lieu sur la carte, puis « Analyser ce lieu avec NASA
 
 En local : `run.bat` ou `bash run.sh`, puis http://localhost:5173
 
-L’accueil demande un compte. Le mot de passe est hashé (PBKDF2) dans `data/users.sqlite`, jamais écrit en clair. Cette base est sur la machine qui lance l’API : GitHub Pages seul ne peut pas garder les comptes.
+L’accueil demande un compte Supabase. Le mot de passe est hashé chez Supabase, jamais dans le navigateur ni dans ce dépôt. Copie `frontend/.env.example` vers `frontend/.env.local` et mets l’URL du projet plus la clé `anon` (publique). Dans Supabase, Authentication → URL Configuration, ajoute `http://localhost:5173` et `https://jmcagboh.github.io`. Pour entrer sans mail de confirmation : Authentication → Providers → Email, décoche Confirm email.
 
 ## Sources
 
