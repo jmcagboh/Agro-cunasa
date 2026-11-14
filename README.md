@@ -12,6 +12,8 @@ Ouvrir le site, choisir un lieu sur la carte, puis « Analyser ce lieu avec NASA
 
 En local : `run.bat` ou `bash run.sh`, puis http://localhost:5173
 
+L’accueil demande un compte. Le mot de passe est hashé (PBKDF2) dans `data/users.sqlite`, jamais écrit en clair. Cette base est sur la machine qui lance l’API : GitHub Pages seul ne peut pas garder les comptes.
+
 ## Sources
 
 NASA POWER, communauté AG : `PRECTOTCORR`, `T2M`, `T2M_MIN`, `T2M_MAX`, `RH2M`, `ALLSKY_SFC_SW_DWN`, `EVPTRNS`, `GWETROOT`, `GWETTOP`.

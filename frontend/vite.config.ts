@@ -7,6 +7,7 @@ export default defineConfig(({ command }) => ({
   server: {
     port: 5173,
     fs: { allow: [".."] },
+    proxy: { "/api": "http://127.0.0.1:8000" },
   },
   build: { outDir: "dist", emptyOutDir: true },
 }));

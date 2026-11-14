@@ -5,6 +5,7 @@ import {
 import MapPicker from "./components/MapPicker";
 import { ClimateChart, SeasonStrip, StrategyRadar, WaterChart } from "./components/Charts";
 import { analyzePlace, CROP_LIST, geocodePlace, ROADMAP, SOURCES } from "./engine/analyze";
+import type { Account } from "./auth";
 
 function tx(lang: Lang, fr: string, en: string) {
   return lang === "en" ? en : fr;
@@ -36,8 +37,9 @@ const PRIORITY_LABEL: Record<Lang, Record<string, string>> = {
   },
 };
 
-export default function App() {
+export default function App({ user, onLogout }: { user: Account; onLogout: () => void }) {
   const [lang, setLang] = useState<Lang>("fr");
+  const [pane, setPane] = useState<"place" | "field" | "result">("place");
   const [place, setPlace] = useState<Place>({ name: "", lat: 15, lon: 10 });
   const [marked, setMarked] = useState(false);
   const [zoom, setZoom] = useState(2);
@@ -91,6 +93,7 @@ export default function App() {
       if (controller.signal.aborted) return;
       setResult(data);
       setOpenId(data.strategies[0]?.id ?? "baseline");
+      setPane("result");
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
       setError(err instanceof Error ? err.message : String(err));
@@ -134,15 +137,19 @@ export default function App() {
           <div>
             <p className="text-xs uppercase tracking-widest text-amber-200">NASA Space Apps · Field Shift</p>
             <h1 className="text-2xl font-semibold">TerraShift</h1>
-            <p className="max-w-xl text-sm text-stone-200">
+            <p className="hidden max-w-xl text-sm text-stone-200 sm:block">
               {tx(lang,
                 "Comparer des rotations pour le sol et le climat. Aide à la décision : ce n’est pas une consigne.",
                 "Compare rotations for soil and climate. Decision support: this is not an instruction.")}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button className="rounded-full border border-stone-400 px-3 py-1 text-sm" onClick={() => setLang(lang === "fr" ? "en" : "fr")}>
-              {lang === "fr" ? "English" : "Français"}
+            <span className="max-w-[8rem] truncate text-sm text-amber-100">{user.name}</span>
+            <button className="rounded-full border border-stone-400 px-3 py-2 text-sm" onClick={() => setLang(lang === "fr" ? "en" : "fr")}>
+              {lang === "fr" ? "EN" : "FR"}
+            </button>
+            <button className="rounded-full bg-white px-3 py-2 text-sm text-soil-900" onClick={onLogout}>
+              {tx(lang, "Sortir", "Log out")}
             </button>
           </div>
         </div>
@@ -157,8 +164,8 @@ export default function App() {
         </p>
       </div>
 
-      <main className="mx-auto grid max-w-5xl gap-4 px-4 py-4">
-        <section className="rounded-2xl bg-white p-3 shadow-sm">
+      <main className="mx-auto grid max-w-5xl gap-4 px-4 py-4 pb-24 md:pb-4">
+        <section className={`rounded-2xl bg-white p-3 shadow-sm ${pane === "place" ? "block" : "hidden md:block"}`}>
           <div className="mb-2 flex flex-wrap items-end justify-between gap-2 px-1">
             <h2 className="text-lg font-semibold">{tx(lang, "Où se trouve la parcelle ?", "Where is the field?")}</h2>
             <p className="text-sm text-stone-600">
@@ -177,7 +184,7 @@ export default function App() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={tx(lang, "Rechercher un village, une ville…", "Search a village or city…")}
-              className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2"
+              className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-3 text-base"
             />
             <button className="rounded-lg border border-leaf-700 px-4 py-2 text-leaf-700" type="submit">
               {tx(lang, "Chercher", "Search")}
@@ -197,14 +204,14 @@ export default function App() {
           <button
             type="button"
             disabled={!marked || busy}
-            className="mt-3 rounded-lg bg-leaf-700 px-4 py-2 text-white disabled:opacity-40"
+            className="mt-3 w-full rounded-lg bg-leaf-700 px-4 py-3 text-base text-white disabled:opacity-40"
             onClick={() => setTicket((value) => value + 1)}
           >
             {tx(lang, "Analyser ce lieu avec NASA POWER", "Analyse this place with NASA POWER")}
           </button>
         </section>
 
-        <section className="rounded-2xl bg-white p-4 shadow-sm">
+        <section className={`rounded-2xl bg-white p-4 shadow-sm ${pane === "field" ? "block" : "hidden md:block"}`}>
           <h2 className="text-lg font-semibold">{tx(lang, "Votre parcelle", "Your field")}</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <label className="text-sm">
@@ -275,6 +282,8 @@ export default function App() {
           </div>
         </section>
 
+        {(error || busy || result) && (
+        <div className={pane === "result" ? "contents" : "hidden md:contents"}>
         {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
         {busy && (
           <p className="text-sm text-stone-600">
@@ -456,7 +465,20 @@ export default function App() {
             )}
           </>
         )}
+        </div>
+        )}
       </main>
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)] text-sm md:hidden">
+        {([
+          ["place", tx(lang, "Lieu", "Place")],
+          ["field", tx(lang, "Parcelle", "Field")],
+          ["result", tx(lang, "Résultat", "Result")],
+        ] as const).map(([id, label]) => (
+          <button key={id} type="button" className={`py-3 ${pane === id ? "font-semibold text-leaf-700" : "text-stone-500"}`} onClick={() => setPane(id)}>
+            {label}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

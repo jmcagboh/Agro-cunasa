@@ -8,14 +8,19 @@ from fastapi.middleware.cors import CORSMiddleware
 load_dotenv()
 
 from . import service  # noqa: E402
+from .auth import router as auth_router  # noqa: E402
 from .knowledge import load_crops_doc  # noqa: E402
 from .schemas import AnalyzeRequest, AnalyzeResponse, ClimateRequest, ClimateResponse  # noqa: E402
 from .static_info import DATA_SOURCES, DATA_SOURCES_NOTE, ROADMAP  # noqa: E402
 
 app = FastAPI(title="TerraShift API", version="0.3.0")
+app.include_router(auth_router)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173").split(","),
+    allow_origins=[item.strip() for item in os.getenv(
+        "CORS_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,https://jmcagboh.github.io",
+    ).split(",") if item.strip()],
     allow_methods=["*"], allow_headers=["*"],
 )
 

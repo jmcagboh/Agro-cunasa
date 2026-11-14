@@ -22,7 +22,7 @@ export default function MapPicker({
   lat, lon, zoom, marked, onPick,
 }: { lat: number; lon: number; zoom: number; marked: boolean; onPick: (lat: number, lon: number) => void }) {
   return (
-    <MapContainer center={[lat, lon]} zoom={zoom} scrollWheelZoom className="h-64 w-full rounded-xl sm:h-80">
+    <MapContainer center={[lat, lon]} zoom={zoom} scrollWheelZoom className="h-[46vh] min-h-56 w-full rounded-xl sm:h-80">
       <TileLayer
         attribution='&copy; OpenStreetMap'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
