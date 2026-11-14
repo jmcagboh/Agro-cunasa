@@ -1,0 +1,985 @@
+{
+ "version": "0.1",
+ "note": "Valeurs indicatives (échelle 0-1) issues de connaissances agronomiques générales ; à valider et adapter localement avec des experts.",
+ "sowing_note": "Fenêtres de semis indicatives (mois 1-12) par type de climat ; le moteur calcule ses propres fenêtres à partir des données NASA POWER.",
+ "crops": [
+  {
+   "id": "maize",
+   "name_fr": "Maïs",
+   "name_en": "Maize",
+   "group": "cereal",
+   "family": "Poaceae",
+   "cycle_months": 4,
+   "water_min_mm": 400,
+   "water_opt_mm": 650,
+   "t_mean_min": 16,
+   "t_mean_max": 30,
+   "drought_tol": 0.35,
+   "frost_tol": 0.1,
+   "heat_tol": 0.6,
+   "n_fixation": 0,
+   "rooting": 0.6,
+   "organic_matter": 0.6,
+   "soil_cover": 0.6,
+   "pest_break": 0.3,
+   "fodder": 0.5,
+   "market": 0.8,
+   "notes_fr": "Céréale exigeante en eau et en azote ; bonne valeur marchande.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "sorghum",
+   "name_fr": "Sorgho",
+   "name_en": "Sorghum",
+   "group": "cereal",
+   "family": "Poaceae",
+   "cycle_months": 4,
+   "water_min_mm": 300,
+   "water_opt_mm": 500,
+   "t_mean_min": 18,
+   "t_mean_max": 34,
+   "drought_tol": 0.85,
+   "frost_tol": 0.1,
+   "heat_tol": 0.9,
+   "n_fixation": 0,
+   "rooting": 0.8,
+   "organic_matter": 0.6,
+   "soil_cover": 0.6,
+   "pest_break": 0.3,
+   "fodder": 0.6,
+   "market": 0.55,
+   "notes_fr": "Céréale tolérante à la sécheresse et à la chaleur.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     5
+    ]
+   }
+  },
+  {
+   "id": "millet",
+   "name_fr": "Mil",
+   "name_en": "Pearl millet",
+   "group": "cereal",
+   "family": "Poaceae",
+   "cycle_months": 3,
+   "water_min_mm": 200,
+   "water_opt_mm": 400,
+   "t_mean_min": 20,
+   "t_mean_max": 35,
+   "drought_tol": 0.95,
+   "frost_tol": 0.1,
+   "heat_tol": 0.95,
+   "n_fixation": 0,
+   "rooting": 0.7,
+   "organic_matter": 0.5,
+   "soil_cover": 0.5,
+   "pest_break": 0.3,
+   "fodder": 0.5,
+   "market": 0.5,
+   "notes_fr": "Céréale très résistante à la sécheresse, cycle court.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     5
+    ]
+   }
+  },
+  {
+   "id": "rice",
+   "name_fr": "Riz pluvial",
+   "name_en": "Rainfed rice",
+   "group": "cereal",
+   "family": "Poaceae",
+   "cycle_months": 4,
+   "water_min_mm": 700,
+   "water_opt_mm": 1100,
+   "t_mean_min": 20,
+   "t_mean_max": 32,
+   "drought_tol": 0.1,
+   "frost_tol": 0.1,
+   "heat_tol": 0.5,
+   "n_fixation": 0,
+   "rooting": 0.3,
+   "organic_matter": 0.5,
+   "soil_cover": 0.4,
+   "pest_break": 0.35,
+   "fodder": 0.3,
+   "market": 0.8,
+   "notes_fr": "Grands besoins en eau ; adapté aux bas-fonds et zones humides.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     5
+    ]
+   }
+  },
+  {
+   "id": "wheat",
+   "name_fr": "Blé",
+   "name_en": "Wheat",
+   "group": "cereal",
+   "family": "Poaceae",
+   "cycle_months": 5,
+   "water_min_mm": 300,
+   "water_opt_mm": 500,
+   "t_mean_min": 5,
+   "t_mean_max": 22,
+   "drought_tol": 0.4,
+   "frost_tol": 0.85,
+   "heat_tol": 0.25,
+   "n_fixation": 0,
+   "rooting": 0.6,
+   "organic_matter": 0.5,
+   "soil_cover": 0.6,
+   "pest_break": 0.3,
+   "fodder": 0.4,
+   "market": 0.8,
+   "notes_fr": "Céréale de saison fraîche, sensible à la chaleur.",
+   "sowing_windows": {
+    "tropical_bimodal": [],
+    "tropical_unimodal": [],
+    "semi_arid": [
+     11,
+     12
+    ],
+    "temperate": [
+     10,
+     11
+    ]
+   }
+  },
+  {
+   "id": "barley",
+   "name_fr": "Orge",
+   "name_en": "Barley",
+   "group": "cereal",
+   "family": "Poaceae",
+   "cycle_months": 4,
+   "water_min_mm": 250,
+   "water_opt_mm": 450,
+   "t_mean_min": 4,
+   "t_mean_max": 22,
+   "drought_tol": 0.55,
+   "frost_tol": 0.8,
+   "heat_tol": 0.35,
+   "n_fixation": 0,
+   "rooting": 0.6,
+   "organic_matter": 0.5,
+   "soil_cover": 0.6,
+   "pest_break": 0.3,
+   "fodder": 0.6,
+   "market": 0.6,
+   "notes_fr": "Céréale de saison fraîche plus tolérante à la sécheresse que le blé.",
+   "sowing_windows": {
+    "tropical_bimodal": [],
+    "tropical_unimodal": [],
+    "semi_arid": [
+     11,
+     12
+    ],
+    "temperate": [
+     10,
+     11
+    ]
+   }
+  },
+  {
+   "id": "cassava",
+   "name_fr": "Manioc",
+   "name_en": "Cassava",
+   "group": "root_tuber",
+   "family": "Euphorbiaceae",
+   "cycle_months": 10,
+   "water_min_mm": 600,
+   "water_opt_mm": 1000,
+   "t_mean_min": 20,
+   "t_mean_max": 32,
+   "drought_tol": 0.8,
+   "frost_tol": 0.05,
+   "heat_tol": 0.8,
+   "n_fixation": 0,
+   "rooting": 0.6,
+   "organic_matter": 0.4,
+   "soil_cover": 0.5,
+   "pest_break": 0.6,
+   "fodder": 0.2,
+   "market": 0.6,
+   "notes_fr": "Tubercule robuste, cycle long, tolère les sols pauvres.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4
+    ],
+    "tropical_unimodal": [
+     4,
+     5
+    ],
+    "semi_arid": [],
+    "temperate": []
+   }
+  },
+  {
+   "id": "yam",
+   "name_fr": "Igname",
+   "name_en": "Yam",
+   "group": "root_tuber",
+   "family": "Dioscoreaceae",
+   "cycle_months": 8,
+   "water_min_mm": 800,
+   "water_opt_mm": 1200,
+   "t_mean_min": 22,
+   "t_mean_max": 32,
+   "drought_tol": 0.3,
+   "frost_tol": 0.05,
+   "heat_tol": 0.6,
+   "n_fixation": 0,
+   "rooting": 0.4,
+   "organic_matter": 0.4,
+   "soil_cover": 0.5,
+   "pest_break": 0.6,
+   "fodder": 0.1,
+   "market": 0.75,
+   "notes_fr": "Tubercule à forte valeur, exigeant en eau et en travail.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4
+    ],
+    "tropical_unimodal": [
+     4,
+     5
+    ],
+    "semi_arid": [],
+    "temperate": []
+   }
+  },
+  {
+   "id": "sweet_potato",
+   "name_fr": "Patate douce",
+   "name_en": "Sweet potato",
+   "group": "root_tuber",
+   "family": "Convolvulaceae",
+   "cycle_months": 5,
+   "water_min_mm": 400,
+   "water_opt_mm": 700,
+   "t_mean_min": 18,
+   "t_mean_max": 32,
+   "drought_tol": 0.6,
+   "frost_tol": 0.1,
+   "heat_tol": 0.7,
+   "n_fixation": 0,
+   "rooting": 0.5,
+   "organic_matter": 0.5,
+   "soil_cover": 0.9,
+   "pest_break": 0.6,
+   "fodder": 0.5,
+   "market": 0.55,
+   "notes_fr": "Couvre bien le sol ; feuilles et tubercules utilisables.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "potato",
+   "name_fr": "Pomme de terre",
+   "name_en": "Potato",
+   "group": "root_tuber",
+   "family": "Solanaceae",
+   "cycle_months": 4,
+   "water_min_mm": 400,
+   "water_opt_mm": 600,
+   "t_mean_min": 10,
+   "t_mean_max": 22,
+   "drought_tol": 0.3,
+   "frost_tol": 0.3,
+   "heat_tol": 0.15,
+   "n_fixation": 0,
+   "rooting": 0.3,
+   "organic_matter": 0.3,
+   "soil_cover": 0.5,
+   "pest_break": 0.5,
+   "fodder": 0.1,
+   "market": 0.75,
+   "notes_fr": "Préfère les climats frais ; sensible à la chaleur.",
+   "sowing_windows": {
+    "tropical_bimodal": [],
+    "tropical_unimodal": [],
+    "semi_arid": [],
+    "temperate": [
+     3,
+     4
+    ]
+   }
+  },
+  {
+   "id": "tomato",
+   "name_fr": "Tomate",
+   "name_en": "Tomato",
+   "group": "vegetable",
+   "family": "Solanaceae",
+   "cycle_months": 4,
+   "water_min_mm": 400,
+   "water_opt_mm": 600,
+   "t_mean_min": 15,
+   "t_mean_max": 28,
+   "drought_tol": 0.25,
+   "frost_tol": 0.05,
+   "heat_tol": 0.35,
+   "n_fixation": 0,
+   "rooting": 0.4,
+   "organic_matter": 0.3,
+   "soil_cover": 0.5,
+   "pest_break": 0.5,
+   "fodder": 0,
+   "market": 0.8,
+   "notes_fr": "Culture à forte valeur, souvent dépendante de l’irrigation.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "groundnut",
+   "name_fr": "Arachide",
+   "name_en": "Groundnut",
+   "group": "legume",
+   "family": "Fabaceae",
+   "cycle_months": 4,
+   "water_min_mm": 400,
+   "water_opt_mm": 650,
+   "t_mean_min": 20,
+   "t_mean_max": 32,
+   "drought_tol": 0.55,
+   "frost_tol": 0.1,
+   "heat_tol": 0.7,
+   "n_fixation": 0.7,
+   "rooting": 0.5,
+   "organic_matter": 0.5,
+   "soil_cover": 0.7,
+   "pest_break": 0.75,
+   "fodder": 0.6,
+   "market": 0.7,
+   "notes_fr": "Légumineuse : fixe l’azote, fanes utilisables en fourrage.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "cowpea",
+   "name_fr": "Niébé",
+   "name_en": "Cowpea",
+   "group": "legume",
+   "family": "Fabaceae",
+   "cycle_months": 3,
+   "water_min_mm": 250,
+   "water_opt_mm": 450,
+   "t_mean_min": 20,
+   "t_mean_max": 34,
+   "drought_tol": 0.8,
+   "frost_tol": 0.1,
+   "heat_tol": 0.85,
+   "n_fixation": 0.7,
+   "rooting": 0.5,
+   "organic_matter": 0.5,
+   "soil_cover": 0.8,
+   "pest_break": 0.75,
+   "fodder": 0.8,
+   "market": 0.55,
+   "notes_fr": "Légumineuse tolérante à la sécheresse, cycle court, bon fourrage.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     5
+    ]
+   }
+  },
+  {
+   "id": "soybean",
+   "name_fr": "Soja",
+   "name_en": "Soybean",
+   "group": "legume",
+   "family": "Fabaceae",
+   "cycle_months": 4,
+   "water_min_mm": 450,
+   "water_opt_mm": 700,
+   "t_mean_min": 18,
+   "t_mean_max": 30,
+   "drought_tol": 0.4,
+   "frost_tol": 0.2,
+   "heat_tol": 0.5,
+   "n_fixation": 0.8,
+   "rooting": 0.5,
+   "organic_matter": 0.6,
+   "soil_cover": 0.7,
+   "pest_break": 0.8,
+   "fodder": 0.6,
+   "market": 0.85,
+   "notes_fr": "Forte fixation d’azote et bon marché ; plus exigeant en eau.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "common_bean",
+   "name_fr": "Haricot commun",
+   "name_en": "Common bean",
+   "group": "legume",
+   "family": "Fabaceae",
+   "cycle_months": 3,
+   "water_min_mm": 300,
+   "water_opt_mm": 500,
+   "t_mean_min": 15,
+   "t_mean_max": 26,
+   "drought_tol": 0.3,
+   "frost_tol": 0.2,
+   "heat_tol": 0.3,
+   "n_fixation": 0.5,
+   "rooting": 0.4,
+   "organic_matter": 0.4,
+   "soil_cover": 0.6,
+   "pest_break": 0.7,
+   "fodder": 0.3,
+   "market": 0.65,
+   "notes_fr": "Légumineuse de cycle court, sensible à la chaleur.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "faba_bean",
+   "name_fr": "Fève",
+   "name_en": "Faba bean",
+   "group": "legume",
+   "family": "Fabaceae",
+   "cycle_months": 5,
+   "water_min_mm": 300,
+   "water_opt_mm": 500,
+   "t_mean_min": 5,
+   "t_mean_max": 20,
+   "drought_tol": 0.35,
+   "frost_tol": 0.7,
+   "heat_tol": 0.2,
+   "n_fixation": 0.8,
+   "rooting": 0.5,
+   "organic_matter": 0.5,
+   "soil_cover": 0.7,
+   "pest_break": 0.8,
+   "fodder": 0.6,
+   "market": 0.5,
+   "notes_fr": "Légumineuse de saison fraîche, bonne fixation d’azote.",
+   "sowing_windows": {
+    "tropical_bimodal": [],
+    "tropical_unimodal": [],
+    "semi_arid": [
+     11,
+     12
+    ],
+    "temperate": [
+     10,
+     11
+    ]
+   }
+  },
+  {
+   "id": "pigeon_pea",
+   "name_fr": "Pois d’angole",
+   "name_en": "Pigeon pea",
+   "group": "legume",
+   "family": "Fabaceae",
+   "cycle_months": 6,
+   "water_min_mm": 400,
+   "water_opt_mm": 700,
+   "t_mean_min": 20,
+   "t_mean_max": 32,
+   "drought_tol": 0.8,
+   "frost_tol": 0.1,
+   "heat_tol": 0.8,
+   "n_fixation": 0.7,
+   "rooting": 0.9,
+   "organic_matter": 0.7,
+   "soil_cover": 0.7,
+   "pest_break": 0.75,
+   "fodder": 0.7,
+   "market": 0.5,
+   "notes_fr": "Légumineuse arbustive à racines profondes, résiste à la sécheresse.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "mucuna",
+   "name_fr": "Mucuna (couverture)",
+   "name_en": "Velvet bean (cover crop)",
+   "group": "cover_legume",
+   "family": "Fabaceae",
+   "cycle_months": 4,
+   "water_min_mm": 500,
+   "water_opt_mm": 800,
+   "t_mean_min": 20,
+   "t_mean_max": 32,
+   "drought_tol": 0.5,
+   "frost_tol": 0.05,
+   "heat_tol": 0.7,
+   "n_fixation": 0.9,
+   "rooting": 0.5,
+   "organic_matter": 0.95,
+   "soil_cover": 0.95,
+   "pest_break": 0.8,
+   "fodder": 0.2,
+   "market": 0.05,
+   "notes_fr": "Plante de couverture : fixe l’azote, enrichit le sol, étouffe les adventices.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "lablab",
+   "name_fr": "Dolique (lablab)",
+   "name_en": "Lablab",
+   "group": "cover_legume",
+   "family": "Fabaceae",
+   "cycle_months": 4,
+   "water_min_mm": 300,
+   "water_opt_mm": 600,
+   "t_mean_min": 18,
+   "t_mean_max": 32,
+   "drought_tol": 0.8,
+   "frost_tol": 0.1,
+   "heat_tol": 0.8,
+   "n_fixation": 0.8,
+   "rooting": 0.7,
+   "organic_matter": 0.8,
+   "soil_cover": 0.9,
+   "pest_break": 0.75,
+   "fodder": 0.95,
+   "market": 0.2,
+   "notes_fr": "Légumineuse de couverture et de fourrage, résiste à la sécheresse.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     5
+    ]
+   }
+  },
+  {
+   "id": "sunflower",
+   "name_fr": "Tournesol",
+   "name_en": "Sunflower",
+   "group": "oilseed",
+   "family": "Asteraceae",
+   "cycle_months": 4,
+   "water_min_mm": 350,
+   "water_opt_mm": 550,
+   "t_mean_min": 15,
+   "t_mean_max": 28,
+   "drought_tol": 0.7,
+   "frost_tol": 0.3,
+   "heat_tol": 0.6,
+   "n_fixation": 0,
+   "rooting": 0.9,
+   "organic_matter": 0.5,
+   "soil_cover": 0.5,
+   "pest_break": 0.7,
+   "fodder": 0.3,
+   "market": 0.65,
+   "notes_fr": "Racines profondes ; rompt les cycles de ravageurs des céréales.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "sesame",
+   "name_fr": "Sésame",
+   "name_en": "Sesame",
+   "group": "oilseed",
+   "family": "Pedaliaceae",
+   "cycle_months": 4,
+   "water_min_mm": 300,
+   "water_opt_mm": 450,
+   "t_mean_min": 22,
+   "t_mean_max": 32,
+   "drought_tol": 0.85,
+   "frost_tol": 0.05,
+   "heat_tol": 0.9,
+   "n_fixation": 0,
+   "rooting": 0.6,
+   "organic_matter": 0.3,
+   "soil_cover": 0.4,
+   "pest_break": 0.7,
+   "fodder": 0.1,
+   "market": 0.7,
+   "notes_fr": "Oléagineux très tolérant à la chaleur et à la sécheresse.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     5
+    ]
+   }
+  },
+  {
+   "id": "cotton",
+   "name_fr": "Coton",
+   "name_en": "Cotton",
+   "group": "fiber",
+   "family": "Malvaceae",
+   "cycle_months": 6,
+   "water_min_mm": 500,
+   "water_opt_mm": 700,
+   "t_mean_min": 20,
+   "t_mean_max": 32,
+   "drought_tol": 0.55,
+   "frost_tol": 0.05,
+   "heat_tol": 0.8,
+   "n_fixation": 0,
+   "rooting": 0.7,
+   "organic_matter": 0.3,
+   "soil_cover": 0.4,
+   "pest_break": 0.6,
+   "fodder": 0.2,
+   "market": 0.7,
+   "notes_fr": "Culture de rente ; sensible aux ravageurs, couvre peu le sol.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "okra",
+   "name_fr": "Gombo",
+   "name_en": "Okra",
+   "group": "vegetable",
+   "family": "Malvaceae",
+   "cycle_months": 4,
+   "water_min_mm": 400,
+   "water_opt_mm": 600,
+   "t_mean_min": 20,
+   "t_mean_max": 32,
+   "drought_tol": 0.5,
+   "frost_tol": 0.05,
+   "heat_tol": 0.85,
+   "n_fixation": 0,
+   "rooting": 0.5,
+   "organic_matter": 0.3,
+   "soil_cover": 0.5,
+   "pest_break": 0.5,
+   "fodder": 0.1,
+   "market": 0.6,
+   "notes_fr": "Légume de saison chaude, cycle court.",
+   "sowing_windows": {
+    "tropical_bimodal": [
+     3,
+     4,
+     9
+    ],
+    "tropical_unimodal": [
+     5,
+     6
+    ],
+    "semi_arid": [
+     6,
+     7
+    ],
+    "temperate": [
+     4,
+     5
+    ]
+   }
+  },
+  {
+   "id": "cabbage",
+   "name_fr": "Chou",
+   "name_en": "Cabbage",
+   "group": "vegetable",
+   "family": "Brassicaceae",
+   "cycle_months": 4,
+   "water_min_mm": 350,
+   "water_opt_mm": 500,
+   "t_mean_min": 10,
+   "t_mean_max": 24,
+   "drought_tol": 0.25,
+   "frost_tol": 0.6,
+   "heat_tol": 0.25,
+   "n_fixation": 0,
+   "rooting": 0.3,
+   "organic_matter": 0.3,
+   "soil_cover": 0.6,
+   "pest_break": 0.6,
+   "fodder": 0.4,
+   "market": 0.6,
+   "notes_fr": "Légume de saison fraîche, sensible à la sécheresse.",
+   "sowing_windows": {
+    "tropical_bimodal": [],
+    "tropical_unimodal": [],
+    "semi_arid": [],
+    "temperate": [
+     3,
+     4
+    ]
+   }
+  },
+  {
+   "id": "rapeseed",
+   "name_fr": "Colza",
+   "name_en": "Rapeseed",
+   "group": "oilseed",
+   "family": "Brassicaceae",
+   "cycle_months": 6,
+   "water_min_mm": 300,
+   "water_opt_mm": 500,
+   "t_mean_min": 5,
+   "t_mean_max": 20,
+   "drought_tol": 0.45,
+   "frost_tol": 0.7,
+   "heat_tol": 0.25,
+   "n_fixation": 0,
+   "rooting": 0.8,
+   "organic_matter": 0.5,
+   "soil_cover": 0.6,
+   "pest_break": 0.8,
+   "fodder": 0.3,
+   "market": 0.7,
+   "notes_fr": "Oléagineux de saison fraîche, bonne rupture sanitaire.",
+   "sowing_windows": {
+    "tropical_bimodal": [],
+    "tropical_unimodal": [],
+    "semi_arid": [],
+    "temperate": [
+     8,
+     9
+    ]
+   }
+  }
+ ]
+}
