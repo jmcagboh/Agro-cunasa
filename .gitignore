@@ -4,6 +4,8 @@ __pycache__/
 .env
 .env.local
 .env.*.local
+.vercel/
+docs/
 backend/cache/
 data/cache/
 data/users.sqlite
