@@ -5,14 +5,15 @@ const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = url && key ? createClient(url, key) : null;
 
-export type Account = { id: string; name: string; email: string };
+export type Account = { id: string; name: string; email: string; phone: string };
 
 function toAccount(user: User): Account {
-  const meta = user.user_metadata as { name?: string };
+  const meta = user.user_metadata as { name?: string; phone?: string };
   return {
     id: user.id,
     name: meta.name || user.email?.split("@")[0] || "Compte",
     email: user.email ?? "",
+    phone: meta.phone ?? "",
   };
 }
 
@@ -62,4 +63,12 @@ export async function currentAccount(): Promise<Account | null> {
 
 export async function logout() {
   if (supabase) await supabase.auth.signOut();
+}
+
+export async function savePhone(phone: string): Promise<Account> {
+  const client = requireClient();
+  const { data, error } = await client.auth.updateUser({ data: { phone } });
+  if (error) throw new Error(error.message);
+  if (!data.user) throw new Error("Numéro non enregistré.");
+  return toAccount(data.user);
 }

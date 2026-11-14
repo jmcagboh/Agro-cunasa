@@ -5,7 +5,8 @@ import {
 import MapPicker from "./components/MapPicker";
 import { ClimateChart, SeasonStrip, StrategyRadar, WaterChart } from "./components/Charts";
 import { analyzePlace, CROP_LIST, geocodePlace, ROADMAP, SOURCES } from "./engine/analyze";
-import type { Account } from "./auth";
+import { savePhone, type Account } from "./auth";
+import Logo from "./Logo";
 
 function tx(lang: Lang, fr: string, en: string) {
   return lang === "en" ? en : fr;
@@ -39,7 +40,10 @@ const PRIORITY_LABEL: Record<Lang, Record<string, string>> = {
 
 export default function App({ user, onLogout }: { user: Account; onLogout: () => void }) {
   const [lang, setLang] = useState<Lang>("fr");
-  const [pane, setPane] = useState<"place" | "field" | "result">("place");
+  const [pane, setPane] = useState<"place" | "field" | "result" | "alerts">("place");
+  const [menu, setMenu] = useState(false);
+  const [phone, setPhone] = useState(user.phone);
+  const [phoneNote, setPhoneNote] = useState("");
   const [place, setPlace] = useState<Place>({ name: "", lat: 15, lon: 10 });
   const [marked, setMarked] = useState(false);
   const [zoom, setZoom] = useState(2);
@@ -134,7 +138,9 @@ export default function App({ user, onLogout }: { user: Account; onLogout: () =>
     <div className="min-h-screen">
       <header className="border-b border-stone-200 bg-soil-900 text-soil-50">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
-          <div>
+          <div className="flex items-center gap-3">
+            <Logo className="h-11 w-11" />
+            <div>
             <p className="text-xs uppercase tracking-widest text-amber-200">NASA Space Apps · Field Shift</p>
             <h1 className="text-2xl font-semibold">TerraShift</h1>
             <p className="hidden max-w-xl text-sm text-stone-200 sm:block">
@@ -142,14 +148,18 @@ export default function App({ user, onLogout }: { user: Account; onLogout: () =>
                 "Comparer des rotations pour le sol et le climat. Aide à la décision : ce n’est pas une consigne.",
                 "Compare rotations for soil and climate. Decision support: this is not an instruction.")}
             </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="max-w-[8rem] truncate text-sm text-amber-100">{user.name}</span>
-            <button className="rounded-full border border-stone-400 px-3 py-2 text-sm" onClick={() => setLang(lang === "fr" ? "en" : "fr")}>
+            <span className="hidden max-w-[8rem] truncate text-sm text-amber-100 sm:inline">{user.name}</span>
+            <button className="hidden rounded-full border border-stone-400 px-3 py-2 text-sm md:inline" onClick={() => setLang(lang === "fr" ? "en" : "fr")}>
               {lang === "fr" ? "EN" : "FR"}
             </button>
-            <button className="rounded-full bg-white px-3 py-2 text-sm text-soil-900" onClick={onLogout}>
+            <button className="hidden rounded-full bg-white px-3 py-2 text-sm text-soil-900 md:inline" onClick={onLogout}>
               {tx(lang, "Sortir", "Log out")}
+            </button>
+            <button className="rounded-full bg-white px-4 py-2 text-sm font-medium text-soil-900 md:hidden" type="button" onClick={() => setMenu(true)}>
+              {tx(lang, "Menu", "Menu")}
             </button>
           </div>
         </div>
@@ -467,12 +477,62 @@ export default function App({ user, onLogout }: { user: Account; onLogout: () =>
         )}
         </div>
         )}
+
+        <Alerts
+          lang={lang}
+          phone={phone}
+          note={phoneNote}
+          result={result}
+          onPhone={setPhone}
+          onSave={async () => {
+            setPhoneNote("");
+            try {
+              const next = await savePhone(phone.trim());
+              setPhone(next.phone);
+              setPhoneNote(tx(lang, "Numéro enregistré sur le compte.", "Number saved on the account."));
+            } catch (err) {
+              setPhoneNote(err instanceof Error ? err.message : "Enregistrement impossible");
+            }
+          }}
+          visible={pane === "alerts"}
+        />
       </main>
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)] text-sm md:hidden">
+      {menu && (
+        <div className="fixed inset-0 z-40 flex flex-col bg-soil-900 px-6 pb-8 pt-6 text-soil-50 md:hidden">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-amber-100">{user.name}</p>
+            <button type="button" className="rounded-full border border-stone-400 px-4 py-2" onClick={() => setMenu(false)}>
+              {tx(lang, "Fermer", "Close")}
+            </button>
+          </div>
+          <nav className="mt-8 flex flex-col gap-2 text-2xl">
+            {([
+              ["place", tx(lang, "Lieu", "Place")],
+              ["field", tx(lang, "Parcelle", "Field")],
+              ["result", tx(lang, "Résultat", "Result")],
+              ["alerts", tx(lang, "Alertes", "Alerts")],
+            ] as const).map(([id, label]) => (
+              <button key={id} type="button" className="rounded-2xl px-2 py-3 text-left" onClick={() => { setPane(id); setMenu(false); }}>
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div className="mt-auto flex gap-2">
+            <button type="button" className="flex-1 rounded-full border border-stone-400 py-3" onClick={() => setLang(lang === "fr" ? "en" : "fr")}>
+              {lang === "fr" ? "English" : "Français"}
+            </button>
+            <button type="button" className="flex-1 rounded-full bg-white py-3 text-soil-900" onClick={onLogout}>
+              {tx(lang, "Sortir", "Log out")}
+            </button>
+          </div>
+        </div>
+      )}
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)] text-sm md:hidden">
         {([
           ["place", tx(lang, "Lieu", "Place")],
           ["field", tx(lang, "Parcelle", "Field")],
           ["result", tx(lang, "Résultat", "Result")],
+          ["alerts", tx(lang, "Alertes", "Alerts")],
         ] as const).map(([id, label]) => (
           <button key={id} type="button" className={`py-3 ${pane === id ? "font-semibold text-leaf-700" : "text-stone-500"}`} onClick={() => setPane(id)}>
             {label}
@@ -481,4 +541,82 @@ export default function App({ user, onLogout }: { user: Account; onLogout: () =>
       </nav>
     </div>
   );
+}
+
+function Alerts({
+  lang, phone, note, result, onPhone, onSave, visible,
+}: {
+  lang: Lang;
+  phone: string;
+  note: string;
+  result: Analyze | null;
+  onPhone: (value: string) => void;
+  onSave: () => void;
+  visible: boolean;
+}) {
+  const message = alertMessage(lang, result);
+  return (
+    <section className={`rounded-2xl bg-white p-4 shadow-sm ${visible ? "block" : "hidden md:block"}`}>
+      <h2 className="text-lg font-semibold">{tx(lang, "Alertes sur le téléphone", "Phone alerts")}</h2>
+      <p className="mt-1 text-sm text-stone-600">
+        {tx(lang,
+          "Le numéro sert à préparer un message : culture la mieux notée, et climat habituel du lieu. L’envoi par SMS n’est pas branché. Le texte reste ici, sur le compte.",
+          "The number prepares a message: the best-scoring crop sequence, and the usual climate of the place. SMS sending is not connected. The text stays here, on the account.")}
+      </p>
+      <label className="mt-4 block text-sm font-medium">
+        {tx(lang, "Numéro de téléphone", "Phone number")}
+        <input
+          className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          placeholder="+228 90 00 00 00"
+          value={phone}
+          onChange={(event) => onPhone(event.target.value)}
+        />
+      </label>
+      <button
+        type="button"
+        className="mt-3 rounded-xl bg-leaf-700 px-4 py-3 text-base text-white disabled:opacity-40"
+        disabled={!/^\+?[0-9][0-9\s-]{7,16}$/.test(phone.trim())}
+        onClick={onSave}
+      >
+        {tx(lang, "Enregistrer le numéro", "Save the number")}
+      </button>
+      {note && <p className="mt-3 text-sm text-leaf-700">{note}</p>}
+      <div className="mt-4 rounded-2xl bg-soil-50 p-4 text-sm">
+        <p className="text-xs uppercase tracking-wide text-stone-500">{tx(lang, "Message préparé", "Prepared message")}</p>
+        <p className="mt-2 whitespace-pre-line">{message}</p>
+      </div>
+    </section>
+  );
+}
+
+function alertMessage(lang: Lang, result: Analyze | null) {
+  if (!result) {
+    return tx(lang, "Analyse d’abord un lieu. Le message se remplit ensuite.", "Analyse a place first. The message fills in after that.");
+  }
+  const best = [...result.strategies].sort((a, b) => b.total_score - a.total_score)[0];
+  const rain = Math.round(result.climate.climatology.reduce((sum, month) => sum + (month.precip_mm ?? 0), 0));
+  const temps = result.climate.climatology.map((month) => month.t2m).filter((value): value is number => value != null);
+  const temp = temps.length ? Math.round((temps.reduce((sum, value) => sum + value, 0) / temps.length) * 10) / 10 : null;
+  const heat = result.climate.extremes.heat_days_per_year;
+  const season = result.climate.season.length_days;
+  const crop = best ? `${best.sequence_names.join(" → ")} (${Math.round(best.total_score * 100)}/100)` : "";
+  if (lang === "en") {
+    return [
+      `Best-scoring sequence here: ${crop}.`,
+      `Usual climate, 2011–2024: about ${rain} mm of rain a year${temp != null ? `, ${temp} °C` : ""}.`,
+      season ? `Growing season around ${season} days.` : "",
+      heat != null ? `About ${Math.round(heat)} days a year above 35 °C.` : "",
+      "This is the habit of the place, not the weather of the coming days.",
+    ].filter(Boolean).join("\n");
+  }
+  return [
+    `Culture la mieux notée ici : ${crop}.`,
+    `Climat habituel, 2011–2024 : environ ${rain} mm de pluie par an${temp != null ? `, ${temp} °C` : ""}.`,
+    season ? `Saison de culture d’environ ${season} jours.` : "",
+    heat != null ? `Environ ${Math.round(heat)} jours par an au-dessus de 35 °C.` : "",
+    "C’est le climat habituel du lieu, pas la météo des prochains jours.",
+  ].filter(Boolean).join("\n");
 }
