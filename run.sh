@@ -12,7 +12,7 @@ cd frontend
 if [[ ! -d node_modules ]]; then npm install; fi
 npm run dev -- --host 127.0.0.1 --port 5173 &
 web_pid=$!
-echo "RotaSol : http://localhost:5173"
+echo "TerraShift : http://localhost:5173"
 echo "API     : http://localhost:8000/docs"
 trap 'kill $api_pid $web_pid' INT TERM
 wait

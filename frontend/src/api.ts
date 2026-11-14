@@ -104,10 +104,6 @@ async function asJson<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function getDemo() {
-  return fetch("/api/demo").then((r) => asJson<Analyze>(r));
-}
-
 export function getCrops() {
   return fetch("/api/crops").then((r) => asJson<Crop[]>(r));
 }
@@ -124,8 +120,8 @@ export function geocode(q: string) {
   return fetch(`/api/geocode?q=${encodeURIComponent(q)}`).then((r) => asJson<Place[]>(r));
 }
 
-export function analyze(body: unknown, demo: boolean, signal?: AbortSignal) {
-  return fetch(demo ? "/api/demo" : "/api/analyze", {
+export function analyze(body: unknown, signal?: AbortSignal) {
+  return fetch("/api/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

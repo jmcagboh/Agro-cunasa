@@ -1,16 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Analyze, Crop, Lang, Parcel, Place, Priorities, PRIORITY_KEYS, Scenario, SourceRow, RoadmapItem,
-  analyze, cropName, geocode, getCrops, getDemo, getRoadmap, getSources,
+  Analyze, Lang, Parcel, Place, Priorities, PRIORITY_KEYS, Scenario, cropName,
 } from "./api";
 import MapPicker from "./components/MapPicker";
 import { ClimateChart, SeasonStrip, StrategyRadar, WaterChart } from "./components/Charts";
+import { analyzePlace, CROP_LIST, geocodePlace, ROADMAP, SOURCES } from "./engine/analyze";
 
 function tx(lang: Lang, fr: string, en: string) {
   return lang === "en" ? en : fr;
 }
-
-const LOME = { name: "Lomé, Togo", lat: 6.13, lon: 1.22 };
 
 const GLOSSARY: Record<Lang, { term: string; text: string }[]> = {
   fr: [
@@ -40,7 +38,9 @@ const PRIORITY_LABEL: Record<Lang, Record<string, string>> = {
 
 export default function App() {
   const [lang, setLang] = useState<Lang>("fr");
-  const [place, setPlace] = useState(LOME);
+  const [place, setPlace] = useState<Place>({ name: "", lat: 15, lon: 10 });
+  const [marked, setMarked] = useState(false);
+  const [zoom, setZoom] = useState(2);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<Place[]>([]);
   const [parcel, setParcel] = useState<Parcel>({
@@ -54,17 +54,14 @@ export default function App() {
     water: 7, erosion: 5, organic_matter: 8, nitrogen: 9, income: 6, pest_break: 5, fodder: 2,
   });
   const [scenario, setScenario] = useState<Scenario>({ precip_delta_pct: 0, temp_delta_c: 0 });
-  const [demoMode, setDemoMode] = useState(true);
-  const [crops, setCrops] = useState<Crop[]>([]);
   const [result, setResult] = useState<Analyze | null>(null);
-  const [sources, setSources] = useState<{ note: string; sources: SourceRow[] } | null>(null);
-  const [roadmap, setRoadmap] = useState<RoadmapItem[]>([]);
   const [tab, setTab] = useState<"results" | "climate" | "sources" | "roadmap">("results");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState("baseline");
-  const ready = useRef(false);
+  const [ticket, setTicket] = useState(0);
   const abort = useRef<AbortController | null>(null);
+  const crops = CROP_LIST;
 
   const body = useMemo(() => ({
     location: { name: place.name, lat: Number(place.lat.toFixed(4)), lon: Number(place.lon.toFixed(4)) },
@@ -76,16 +73,21 @@ export default function App() {
     end_year: 2024,
   }), [place, parcel, priorities, scenario, lang]);
 
-  async function run(useDemo: boolean, payload = body) {
+  async function run(payload = body) {
     abort.current?.abort();
     const controller = new AbortController();
     abort.current = controller;
     setBusy(true);
     setError("");
     try {
-      const data = useDemo && !ready.current
-        ? await getDemo()
-        : await analyze(payload, useDemo, controller.signal);
+      const data = await analyzePlace({
+        lat: payload.location.lat,
+        lon: payload.location.lon,
+        parcel: payload.parcel,
+        priorities: payload.priorities,
+        scenario: payload.scenario,
+        lang: payload.lang,
+      }, controller.signal);
       if (controller.signal.aborted) return;
       setResult(data);
       setOpenId(data.strategies[0]?.id ?? "baseline");
@@ -98,24 +100,16 @@ export default function App() {
   }
 
   useEffect(() => {
-    getCrops().then(setCrops).catch(() => setCrops([]));
-    getSources().then(setSources).catch(() => setSources(null));
-    getRoadmap().then(setRoadmap).catch(() => setRoadmap([]));
-    run(true).finally(() => { ready.current = true; });
-    // première charge démo uniquement
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!ready.current) return;
-    const timer = setTimeout(() => run(demoMode), 350);
+    if (ticket === 0) return;
+    const timer = setTimeout(() => run(), 350);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [body, demoMode]);
+  }, [body, ticket]);
 
-  function pickPlace(next: Place, keepDemo: boolean) {
+  function pickPlace(next: Place) {
     setPlace(next);
-    setDemoMode(keepDemo);
+    setMarked(true);
+    setZoom(6);
     setHits([]);
     setQuery("");
   }
@@ -124,14 +118,14 @@ export default function App() {
     event.preventDefault();
     if (!query.trim()) return;
     try {
-      setHits(await geocode(query.trim()));
+      setHits(await geocodePlace(query.trim()));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
   }
 
-  const synthetic = (result?.climate.source ?? "").toLowerCase().includes("synth");
   const score = (value: number) => Math.round(value * 100);
+  const confidenceLabel = (value: string) => (lang === "en" ? { faible: "low", moyen: "medium", élevé: "high" }[value] ?? value : value);
 
   return (
     <div className="min-h-screen">
@@ -139,7 +133,7 @@ export default function App() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
             <p className="text-xs uppercase tracking-widest text-amber-200">NASA Space Apps · Field Shift</p>
-            <h1 className="text-2xl font-semibold">RotaSol</h1>
+            <h1 className="text-2xl font-semibold">TerraShift</h1>
             <p className="max-w-xl text-sm text-stone-200">
               {tx(lang,
                 "Comparer des rotations pour le sol et le climat. Aide à la décision : ce n’est pas une consigne.",
@@ -147,13 +141,6 @@ export default function App() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {result?.is_demo && (
-              <span className="rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-soil-900">
-                {synthetic
-                  ? tx(lang, "démo — données illustratives", "demo — illustrative data")
-                  : tx(lang, "démo", "demo")}
-              </span>
-            )}
             <button className="rounded-full border border-stone-400 px-3 py-1 text-sm" onClick={() => setLang(lang === "fr" ? "en" : "fr")}>
               {lang === "fr" ? "English" : "Français"}
             </button>
@@ -165,8 +152,8 @@ export default function App() {
         <p className="mx-auto max-w-5xl px-4 py-3 text-sm text-amber-950">
           <strong>{tx(lang, "Quand consulter un expert local. ", "When to ask a local expert. ")}</strong>
           {tx(lang,
-            "RotaSol ne remplace ni votre jugement ni un conseiller agricole. Parlez-en à quelqu’un du territoire si le sol, les semences, l’eau ou les prix diffèrent de ce que vous avez saisi.",
-            "RotaSol does not replace your judgment or a local adviser. Talk to someone who knows the area if soil, seed, water or prices differ from what you entered.")}
+            "TerraShift ne remplace ni votre jugement ni un conseiller agricole. Parlez-en à quelqu’un du territoire si le sol, les semences, l’eau ou les prix diffèrent de ce que vous avez saisi.",
+            "TerraShift does not replace your judgment or a local adviser. Talk to someone who knows the area if soil, seed, water or prices differ from what you entered.")}
         </p>
       </div>
 
@@ -174,12 +161,16 @@ export default function App() {
         <section className="rounded-2xl bg-white p-3 shadow-sm">
           <div className="mb-2 flex flex-wrap items-end justify-between gap-2 px-1">
             <h2 className="text-lg font-semibold">{tx(lang, "Où se trouve la parcelle ?", "Where is the field?")}</h2>
-            <p className="text-sm text-stone-600">{place.name} · {place.lat.toFixed(2)}°, {place.lon.toFixed(2)}°</p>
+            <p className="text-sm text-stone-600">
+              {marked ? `${place.name} · ${place.lat.toFixed(2)}°, ${place.lon.toFixed(2)}°` : tx(lang, "Cliquez sur la carte ou cherchez un lieu", "Click the map or search for a place")}
+            </p>
           </div>
           <MapPicker
             lat={place.lat}
             lon={place.lon}
-            onPick={(lat, lon) => pickPlace({ name: tx(lang, "Point choisi sur la carte", "Point picked on the map"), lat, lon }, false)}
+            zoom={zoom}
+            marked={marked}
+            onPick={(lat, lon) => pickPlace({ name: tx(lang, "Point choisi sur la carte", "Point picked on the map"), lat, lon })}
           />
           <form onSubmit={search} className="mt-3 flex gap-2">
             <input
@@ -188,7 +179,7 @@ export default function App() {
               placeholder={tx(lang, "Rechercher un village, une ville…", "Search a village or city…")}
               className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2"
             />
-            <button className="rounded-lg bg-leaf-700 px-4 py-2 text-white" type="submit">
+            <button className="rounded-lg border border-leaf-700 px-4 py-2 text-leaf-700" type="submit">
               {tx(lang, "Chercher", "Search")}
             </button>
           </form>
@@ -196,7 +187,7 @@ export default function App() {
             <ul className="mt-2 divide-y rounded-lg border border-stone-200">
               {hits.map((hit) => (
                 <li key={`${hit.lat}-${hit.lon}`}>
-                  <button className="w-full px-3 py-2 text-left text-sm hover:bg-soil-50" type="button" onClick={() => pickPlace(hit, false)}>
+                  <button className="w-full px-3 py-2 text-left text-sm hover:bg-soil-50" type="button" onClick={() => pickPlace(hit)}>
                     {hit.name}
                   </button>
                 </li>
@@ -205,10 +196,11 @@ export default function App() {
           )}
           <button
             type="button"
-            className="mt-3 text-sm font-medium text-leaf-700 underline"
-            onClick={() => pickPlace(LOME, true)}
+            disabled={!marked || busy}
+            className="mt-3 rounded-lg bg-leaf-700 px-4 py-2 text-white disabled:opacity-40"
+            onClick={() => setTicket((value) => value + 1)}
           >
-            {tx(lang, "Revenir à la démo Lomé (sans appel NASA)", "Back to the Lomé demo (no NASA call)")}
+            {tx(lang, "Analyser ce lieu avec NASA POWER", "Analyse this place with NASA POWER")}
           </button>
         </section>
 
@@ -286,9 +278,7 @@ export default function App() {
         {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
         {busy && (
           <p className="text-sm text-stone-600">
-            {demoMode
-              ? tx(lang, "Calcul en cours…", "Calculating…")
-              : tx(lang, "Lecture de NASA POWER pour ce point. La première fois peut prendre une minute, puis le résultat est mis en cache.", "Reading NASA POWER for this point. The first call can take a minute, then it is cached.")}
+            {tx(lang, "Lecture de NASA POWER pour ce point. La première fois peut prendre une minute, ensuite le même lieu est réutilisé.", "Reading NASA POWER for this point. The first time can take a minute, then the same place is reused.")}
           </p>
         )}
 
@@ -327,7 +317,7 @@ export default function App() {
                     <input className="w-full" type="range" min={-2} max={3} step={0.5} value={scenario.temp_delta_c} onChange={(e) => setScenario({ ...scenario, temp_delta_c: Number(e.target.value) })} />
                   </label>
                   <p className="mt-2 text-xs text-stone-500">
-                    {tx(lang, "Le curseur relance la comparaison. En mode démo, aucun appel NASA.", "The slider reruns the comparison. Demo mode does not call NASA.")}
+                    {tx(lang, "Le curseur recalcule la comparaison sur les données POWER de ce point.", "The slider recalculates the comparison on this point’s POWER data.")}
                   </p>
                 </div>
                 <div className="rounded-2xl bg-white p-4 shadow-sm">
@@ -343,7 +333,7 @@ export default function App() {
                       </span>
                       <span className="text-right text-sm">
                         <span className="block text-xl font-semibold">{score(strategy.total_score)}</span>
-                        {tx(lang, "confiance", "confidence")} {strategy.confidence}
+                        {tx(lang, "confiance", "confidence")} {confidenceLabel(strategy.confidence)}
                       </span>
                     </button>
                     {openId === strategy.id && (
@@ -431,9 +421,9 @@ export default function App() {
             {tab === "sources" && (
               <section className="rounded-2xl bg-white p-4 text-sm shadow-sm">
                 <h3 className="font-semibold">{tx(lang, "Données NASA utilisées", "NASA data in use")}</h3>
-                <p className="mt-1 text-stone-600">{sources?.note}</p>
+                <p className="mt-1 text-stone-600">{SOURCES.note}</p>
                 <ul className="mt-3 space-y-3">
-                  {(sources?.sources ?? []).map((row) => (
+                  {SOURCES.sources.map((row) => (
                     <li key={row.variable} className="border-b border-stone-100 pb-2">
                       <p className="font-medium">{row.variable}</p>
                       <p>{row.meaning}</p>
@@ -455,7 +445,7 @@ export default function App() {
                     "These sources are not connected. No number on this screen comes from them.")}
                 </p>
                 <ul className="mt-3 space-y-3">
-                  {roadmap.map((item) => (
+                  {ROADMAP.map((item) => (
                     <li key={item.id}>
                       <p className="font-medium">{item.name} · {item.status}</p>
                       <p>{item.role}</p>

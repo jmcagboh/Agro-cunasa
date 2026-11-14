@@ -7,12 +7,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 load_dotenv()
 
-from . import demo, service  # noqa: E402
+from . import service  # noqa: E402
 from .knowledge import load_crops_doc  # noqa: E402
 from .schemas import AnalyzeRequest, AnalyzeResponse, ClimateRequest, ClimateResponse  # noqa: E402
 from .static_info import DATA_SOURCES, DATA_SOURCES_NOTE, ROADMAP  # noqa: E402
 
-app = FastAPI(title="RotaSol API", version="0.2.0")
+app = FastAPI(title="TerraShift API", version="0.3.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173").split(","),
@@ -22,7 +22,7 @@ app.add_middleware(
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "rotasol"}
+    return {"status": "ok", "service": "terrashift"}
 
 
 @app.post("/api/climate", response_model=ClimateResponse)
@@ -48,20 +48,6 @@ def analyze_endpoint(req: AnalyzeRequest):
         raise HTTPException(400, str(e))
 
 
-@app.get("/api/demo", response_model=AnalyzeResponse)
-def demo_endpoint():
-    return service.run_analysis(demo.DEMO_REQUEST, demo.demo_climate())
-
-
-@app.post("/api/demo", response_model=AnalyzeResponse)
-def demo_with_changes(req: AnalyzeRequest):
-    """Mode démo avec curseurs : même climat de démo (hors réseau), parcelle et priorités fournies."""
-    try:
-        return service.run_analysis(req.model_dump(), demo.demo_climate())
-    except ValueError as e:
-        raise HTTPException(400, str(e))
-
-
 @app.get("/api/crops")
 def crops():
     return load_crops_doc()["crops"]
@@ -79,7 +65,7 @@ def roadmap():
 
 @app.get("/api/geocode")
 def geocode(q: str):
-    ua = os.getenv("NOMINATIM_USER_AGENT", "RotaSol/0.1")
+    ua = os.getenv("NOMINATIM_USER_AGENT", "TerraShift/0.3")
     try:
         r = requests.get("https://nominatim.openstreetmap.org/search",
                          params={"q": q, "format": "json", "limit": 5},
