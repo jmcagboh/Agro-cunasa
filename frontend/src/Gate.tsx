@@ -1,12 +1,12 @@
 import { FormEvent, useEffect, useState } from "react";
 import App from "./App";
-import { Account, currentAccount, login, logout, register } from "./auth";
+import { Account, currentAccount, login, logout, register, savePhone } from "./auth";
 
 type Screen = "home" | "login" | "register";
 
 function Field({
-  label, type, value, onChange, autoComplete,
-}: { label: string; type: string; value: string; onChange: (value: string) => void; autoComplete: string }) {
+  label, type, value, onChange, autoComplete, required = true, placeholder,
+}: { label: string; type: string; value: string; onChange: (value: string) => void; autoComplete: string; required?: boolean; placeholder?: string }) {
   return (
     <label className="block text-sm font-medium">
       {label}
@@ -14,9 +14,10 @@ function Field({
         className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
         type={type}
         value={value}
+        placeholder={placeholder}
         autoComplete={autoComplete}
         onChange={(event) => onChange(event.target.value)}
-        required
+        required={required}
       />
     </label>
   );
@@ -29,6 +30,7 @@ export default function Gate() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -49,10 +51,17 @@ export default function Gate() {
     setBusy(true);
     setError("");
     try {
+      if (screen === "register" && !/^\+?[0-9][0-9\s-]{7,16}$/.test(phone.trim())) {
+        throw new Error("Numéro invalide. Exemple : +228 90 00 00 00");
+      }
       const next = screen === "register"
-        ? await register(name, email, password)
+        ? await register(name, email, password, phone.trim())
         : await login(email, password);
-      enter(next);
+      if (screen === "login" && phone.trim()) {
+        if (!/^\+?[0-9][0-9\s-]{7,16}$/.test(phone.trim())) throw new Error("Numéro invalide. Exemple : +228 90 00 00 00");
+        enter(await savePhone(phone.trim()));
+      }
+      else enter(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connexion impossible");
     } finally {
@@ -113,6 +122,18 @@ export default function Gate() {
             )}
             <Field label="E-mail" type="email" value={email} onChange={setEmail} autoComplete="email" />
             <Field label="Mot de passe (8 caractères minimum)" type="password" value={password} onChange={setPassword} autoComplete={screen === "register" ? "new-password" : "current-password"} />
+            <Field
+              label={screen === "register" ? "Numéro de téléphone" : "Numéro de téléphone (si tu veux le mettre à jour)"}
+              type="tel"
+              value={phone}
+              onChange={setPhone}
+              autoComplete="tel"
+              required={screen === "register"}
+              placeholder="+228 90 00 00 00"
+            />
+            <p className="text-xs text-stone-500">
+              Ce numéro prépare les alertes : culture la mieux notée et climat habituel du lieu. L’envoi par SMS n’est pas encore branché.
+            </p>
             {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
             <button className="w-full rounded-xl bg-leaf-700 py-3 text-base font-medium text-white disabled:opacity-50" disabled={busy} type="submit">
               {busy ? "Un instant…" : screen === "register" ? "Créer mon compte" : "Entrer"}

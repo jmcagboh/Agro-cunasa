@@ -17,9 +17,13 @@ Site : https://jmcagboh.github.io/Agro-cunasa/
 
 ## Alertes
 
-Dans **Alertes**, l’agriculteur enregistre son numéro. Le message préparé dit la rotation la mieux notée et le climat habituel du lieu (pluie, température, saison, jours chauds), d’après 2011–2024. Ce n’est pas la météo des prochains jours.
+Le numéro se saisit sur la page de connexion, à la création du compte ou en se reconnectant. Le message préparé dit la rotation la mieux notée et le climat habituel du lieu (pluie, température, saison, jours chauds), d’après 2011–2024. Ce n’est pas la météo des prochains jours.
 
-Le numéro est enregistré dans les métadonnées du compte Supabase. L’envoi SMS n’est pas branché : aucun opérateur n’est configuré, donc aucun texto ne part. Le texte reste visible dans l’application.
+Le numéro est enregistré dans les métadonnées du compte Supabase. L’envoi SMS n’est pas branché : aucun texto ne part. Le texte reste dans **Alertes**.
+
+En choisissant une ville, la carte zoome jusqu’aux rues. L’image satellite Esri / Maxar se précise avec le zoom. Ce n’est pas une caméra en direct.
+
+Le texte à coller sur spaceappschallenge.org est dans `docs/NASA-submission.md`. La page NASA doit être en anglais. Date limite : 15 novembre 2026, 23 h 59, heure locale.
 
 ## Lancer en local
 

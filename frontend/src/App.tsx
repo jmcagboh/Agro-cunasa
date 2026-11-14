@@ -5,7 +5,7 @@ import {
 import MapPicker from "./components/MapPicker";
 import { ClimateChart, SeasonStrip, StrategyRadar, WaterChart } from "./components/Charts";
 import { analyzePlace, CROP_LIST, geocodePlace, ROADMAP, SOURCES } from "./engine/analyze";
-import { savePhone, type Account } from "./auth";
+import type { Account } from "./auth";
 import Logo from "./Logo";
 
 function tx(lang: Lang, fr: string, en: string) {
@@ -42,8 +42,6 @@ export default function App({ user, onLogout }: { user: Account; onLogout: () =>
   const [lang, setLang] = useState<Lang>("fr");
   const [pane, setPane] = useState<"place" | "field" | "result" | "alerts">("place");
   const [menu, setMenu] = useState(false);
-  const [phone, setPhone] = useState(user.phone);
-  const [phoneNote, setPhoneNote] = useState("");
   const [place, setPlace] = useState<Place>({ name: "", lat: 15, lon: 10 });
   const [marked, setMarked] = useState(false);
   const [zoom, setZoom] = useState(2);
@@ -116,7 +114,7 @@ export default function App({ user, onLogout }: { user: Account; onLogout: () =>
   function pickPlace(next: Place) {
     setPlace(next);
     setMarked(true);
-    setZoom(6);
+    setZoom(16);
     setHits([]);
     setQuery("");
   }
@@ -478,24 +476,7 @@ export default function App({ user, onLogout }: { user: Account; onLogout: () =>
         </div>
         )}
 
-        <Alerts
-          lang={lang}
-          phone={phone}
-          note={phoneNote}
-          result={result}
-          onPhone={setPhone}
-          onSave={async () => {
-            setPhoneNote("");
-            try {
-              const next = await savePhone(phone.trim());
-              setPhone(next.phone);
-              setPhoneNote(tx(lang, "Numéro enregistré sur le compte.", "Number saved on the account."));
-            } catch (err) {
-              setPhoneNote(err instanceof Error ? err.message : "Enregistrement impossible");
-            }
-          }}
-          visible={pane === "alerts"}
-        />
+        <Alerts lang={lang} phone={user.phone} result={result} visible={pane === "alerts"} />
       </main>
       {menu && (
         <div className="fixed inset-0 z-40 flex flex-col bg-soil-900 px-6 pb-8 pt-6 text-soil-50 md:hidden">
@@ -544,46 +525,22 @@ export default function App({ user, onLogout }: { user: Account; onLogout: () =>
 }
 
 function Alerts({
-  lang, phone, note, result, onPhone, onSave, visible,
+  lang, phone, result, visible,
 }: {
   lang: Lang;
   phone: string;
-  note: string;
   result: Analyze | null;
-  onPhone: (value: string) => void;
-  onSave: () => void;
   visible: boolean;
 }) {
   const message = alertMessage(lang, result);
   return (
     <section className={`rounded-2xl bg-white p-4 shadow-sm ${visible ? "block" : "hidden md:block"}`}>
-      <h2 className="text-lg font-semibold">{tx(lang, "Alertes sur le téléphone", "Phone alerts")}</h2>
+      <h2 className="text-lg font-semibold">{tx(lang, "Alerte préparée", "Prepared alert")}</h2>
       <p className="mt-1 text-sm text-stone-600">
-        {tx(lang,
-          "Le numéro sert à préparer un message : culture la mieux notée, et climat habituel du lieu. L’envoi par SMS n’est pas branché. Le texte reste ici, sur le compte.",
-          "The number prepares a message: the best-scoring crop sequence, and the usual climate of the place. SMS sending is not connected. The text stays here, on the account.")}
+        {phone
+          ? tx(lang, `Numéro du compte : ${phone}. L’envoi SMS n’est pas branché, le message reste ici.`, `Account number: ${phone}. SMS is not connected, so the message stays here.`)
+          : tx(lang, "Aucun numéro sur ce compte. Ajoute-le sur la page de connexion.", "No number on this account. Add it on the sign-in page.")}
       </p>
-      <label className="mt-4 block text-sm font-medium">
-        {tx(lang, "Numéro de téléphone", "Phone number")}
-        <input
-          className="mt-1 w-full rounded-xl border border-stone-300 px-3 py-3 text-base"
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          placeholder="+228 90 00 00 00"
-          value={phone}
-          onChange={(event) => onPhone(event.target.value)}
-        />
-      </label>
-      <button
-        type="button"
-        className="mt-3 rounded-xl bg-leaf-700 px-4 py-3 text-base text-white disabled:opacity-40"
-        disabled={!/^\+?[0-9][0-9\s-]{7,16}$/.test(phone.trim())}
-        onClick={onSave}
-      >
-        {tx(lang, "Enregistrer le numéro", "Save the number")}
-      </button>
-      {note && <p className="mt-3 text-sm text-leaf-700">{note}</p>}
       <div className="mt-4 rounded-2xl bg-soil-50 p-4 text-sm">
         <p className="text-xs uppercase tracking-wide text-stone-500">{tx(lang, "Message préparé", "Prepared message")}</p>
         <p className="mt-2 whitespace-pre-line">{message}</p>

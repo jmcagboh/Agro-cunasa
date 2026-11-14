@@ -30,11 +30,24 @@ export default function MapPicker({
       </div>
       <MapContainer center={[lat, lon]} zoom={zoom} scrollWheelZoom className="h-[46vh] min-h-56 w-full rounded-xl sm:h-80">
         {satellite ? (
-          <TileLayer
-            attribution="Images &copy; Esri, Maxar, Earthstar Geographics"
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            maxZoom={19}
-          />
+          <>
+            <TileLayer
+              attribution="Images &copy; Esri, Maxar, Earthstar Geographics"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+              maxNativeZoom={18}
+            />
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+              maxNativeZoom={19}
+            />
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+              maxZoom={19}
+              maxNativeZoom={19}
+            />
+          </>
         ) : (
           <TileLayer
             attribution="&copy; OpenStreetMap"
@@ -47,7 +60,7 @@ export default function MapPicker({
       </MapContainer>
       <p className="mt-1 text-xs text-stone-500">
         {satellite
-          ? "Image satellite réelle de ce lieu. La netteté dépend de la zone. Ce n’est pas une photo prise au sol."
+          ? "Zoomez : rues, toits et champs de cette zone apparaissent, comme sur une carte satellite. Photos Esri / Maxar du lieu, pas une caméra en direct."
           : "Plan des routes. Le bouton Satellite montre l’image réelle du lieu."}
       </p>
     </div>

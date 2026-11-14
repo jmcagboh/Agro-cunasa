@@ -33,12 +33,12 @@ function explain(message: string): string {
   return message || "Compte refusé.";
 }
 
-export async function register(name: string, email: string, password: string): Promise<Account> {
+export async function register(name: string, email: string, password: string, phone: string): Promise<Account> {
   const client = requireClient();
   const { data, error } = await client.auth.signUp({
     email,
     password,
-    options: { data: { name } },
+    options: { data: { name, phone } },
   });
   if (error) throw new Error(explain(error.message));
   if (!data.user || !data.session) {
