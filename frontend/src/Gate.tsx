@@ -23,6 +23,10 @@ function Field({
   );
 }
 
+function createGuestAccount(): Account {
+  return { id: "guest", name: "Guest", email: "", phone: "" };
+}
+
 export default function Gate() {
   const [screen, setScreen] = useState<Screen>("home");
   const [account, setAccount] = useState<Account | null>(null);
@@ -46,35 +50,54 @@ export default function Gate() {
     setError("");
   }
 
+  function continueAsGuest() {
+    enter(createGuestAccount());
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError("");
     try {
-      if (screen === "register" && !/^\+?[0-9][0-9\s-]{7,16}$/.test(phone.trim())) {
-        throw new Error("Numéro invalide. Exemple : +228 90 00 00 00");
+      if (screen === "register" && !/^\\+?[0-9][0-9\\s-]{7,16}$/.test(phone.trim())) {
+        throw new Error("Invalid phone number. Example: +228 90 00 00 00");
       }
       const next = screen === "register"
         ? await register(name, email, password, phone.trim())
         : await login(email, password);
       if (screen === "login" && phone.trim()) {
-        if (!/^\+?[0-9][0-9\s-]{7,16}$/.test(phone.trim())) throw new Error("Numéro invalide. Exemple : +228 90 00 00 00");
+        if (!/^\\+?[0-9][0-9\\s-]{7,16}$/.test(phone.trim())) {
+          throw new Error("Invalid phone number. Example: +228 90 00 00 00");
+        }
         enter(await savePhone(phone.trim()));
+      } else {
+        enter(next);
       }
-      else enter(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Connexion impossible");
+      setError(err instanceof Error ? err.message : "Unable to sign in");
     } finally {
       setBusy(false);
     }
   }
 
+  function handleLogout() {
+    if (account?.id === "guest") {
+      setAccount(null);
+      setScreen("home");
+      return;
+    }
+    void logout().finally(() => {
+      setAccount(null);
+      setScreen("home");
+    });
+  }
+
   if (!ready) {
-    return <p className="p-6 text-sm text-stone-600">TerraShift…</p>;
+    return <p className="p-6 text-sm text-stone-600">Loading TerraShift…</p>;
   }
 
   if (account) {
-    return <App user={account} onLogout={() => { void logout().finally(() => { setAccount(null); setScreen("home"); }); }} />;
+    return <App user={account} onLogout={handleLogout} />;
   }
 
   return (
@@ -83,16 +106,16 @@ export default function Gate() {
         <p className="text-xs uppercase tracking-widest text-leaf-700">NASA Space Apps · Field Shift</p>
         <h1 className="mt-2 text-4xl font-semibold text-soil-900">TerraShift</h1>
         <p className="mt-2 text-base text-stone-700">
-          Compare des rotations pour le sol et le climat. Aide à la décision : ce n’est pas une consigne.
+          Compare crop rotations for soil and climate. Decision support: this is not an instruction.
         </p>
 
         {screen === "home" && (
           <div className="mt-8 flex flex-1 flex-col">
             <ol className="space-y-3">
               {[
-                ["1", "Choisis le lieu de la parcelle sur la carte."],
-                ["2", "Dis ce que tu cultives, et ce qui compte pour toi."],
-                ["3", "Compare des rotations avec le climat NASA POWER."],
+                ["1", "Choose the field location on the map."],
+                ["2", "Tell us what you grow and what matters to you."],
+                ["3", "Compare crop rotations using NASA POWER climate data."],
               ].map(([step, text]) => (
                 <li key={step} className="flex gap-3 rounded-2xl bg-white p-4 shadow-sm">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-leaf-700 text-white">{step}</span>
@@ -101,14 +124,17 @@ export default function Gate() {
               ))}
             </ol>
             <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-950">
-              Un conseiller local reste nécessaire si le sol, les semences ou les prix de ton village diffèrent.
+              A local advisor is still recommended if the soil, seeds, or local prices differ from your context.
             </p>
             <div className="mt-auto space-y-3 pt-8">
               <button className="w-full rounded-xl bg-leaf-700 py-3 text-base font-medium text-white" type="button" onClick={() => { setScreen("register"); setError(""); }}>
-                Créer un compte
+                Create an account
               </button>
               <button className="w-full rounded-xl border border-soil-900 py-3 text-base font-medium" type="button" onClick={() => { setScreen("login"); setError(""); }}>
-                J’ai déjà un compte
+                I already have an account
+              </button>
+              <button className="w-full rounded-xl border border-leaf-700 py-3 text-base font-medium text-leaf-700 focus:outline-none focus:ring-2 focus:ring-leaf-700 focus:ring-offset-2" type="button" onClick={continueAsGuest}>
+                Skip — continue without an account
               </button>
             </div>
           </div>
@@ -116,14 +142,14 @@ export default function Gate() {
 
         {screen !== "home" && (
           <form className="mt-8 space-y-4" onSubmit={submit}>
-            <h2 className="text-2xl font-semibold">{screen === "register" ? "Créer un compte" : "Connexion"}</h2>
+            <h2 className="text-2xl font-semibold">{screen === "register" ? "Create an account" : "Sign in"}</h2>
             {screen === "register" && (
-              <Field label="Ton nom ou celui de l’exploitation" type="text" value={name} onChange={setName} autoComplete="name" />
+              <Field label="Your name or farm name" type="text" value={name} onChange={setName} autoComplete="name" />
             )}
-            <Field label="E-mail" type="email" value={email} onChange={setEmail} autoComplete="email" />
-            <Field label="Mot de passe (8 caractères minimum)" type="password" value={password} onChange={setPassword} autoComplete={screen === "register" ? "new-password" : "current-password"} />
+            <Field label="Email" type="email" value={email} onChange={setEmail} autoComplete="email" />
+            <Field label="Password (at least 8 characters)" type="password" value={password} onChange={setPassword} autoComplete={screen === "register" ? "new-password" : "current-password"} />
             <Field
-              label={screen === "register" ? "Numéro de téléphone" : "Numéro de téléphone (si tu veux le mettre à jour)"}
+              label={screen === "register" ? "Phone number" : "Phone number (optional update)"}
               type="tel"
               value={phone}
               onChange={setPhone}
@@ -132,17 +158,20 @@ export default function Gate() {
               placeholder="+228 90 00 00 00"
             />
             <p className="text-xs text-stone-500">
-              Ce numéro prépare les alertes : culture la mieux notée et climat habituel du lieu. L’envoi par SMS n’est pas encore branché.
+              This number prepares alerts about the highest-scoring crop and the usual local climate. SMS is not connected yet.
             </p>
-            {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
+            {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">{error}</p>}
             <button className="w-full rounded-xl bg-leaf-700 py-3 text-base font-medium text-white disabled:opacity-50" disabled={busy} type="submit">
-              {busy ? "Un instant…" : screen === "register" ? "Créer mon compte" : "Entrer"}
+              {busy ? "Please wait…" : screen === "register" ? "Create my account" : "Sign in"}
             </button>
-            <button className="w-full py-2 text-sm text-leaf-700" type="button" onClick={() => setScreen(screen === "login" ? "register" : "login")}>
-              {screen === "login" ? "Pas encore de compte ? Créer un compte" : "Déjà un compte ? Se connecter"}
+            <button className="w-full py-2 text-sm text-leaf-700" type="button" onClick={() => { setScreen(screen === "login" ? "register" : "login"); setError(""); }}>
+              {screen === "login" ? "New here? Create an account" : "Already have an account? Sign in"}
             </button>
-            <button className="w-full py-2 text-sm text-stone-500" type="button" onClick={() => setScreen("home")}>
-              Retour
+            <button className="w-full rounded-xl border border-leaf-700 py-3 text-base font-medium text-leaf-700 focus:outline-none focus:ring-2 focus:ring-leaf-700 focus:ring-offset-2" type="button" onClick={continueAsGuest}>
+              Skip — continue without an account
+            </button>
+            <button className="w-full py-2 text-sm text-stone-500" type="button" onClick={() => { setScreen("home"); setError(""); }}>
+              Back
             </button>
           </form>
         )}
