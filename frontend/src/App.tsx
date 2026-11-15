@@ -1,42 +1,106 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Analyze, Lang, Parcel, Place, Priorities, PRIORITY_KEYS, Scenario, cropName,
-} from "./api";
+import { useState } from "react";
+import { Analyze, Lang, Parcel, Place, Priorities, PRIORITY_KEYS, Scenario, cropName } from "./api";
 import MapPicker from "./components/MapPicker";
 import { ClimateChart, SeasonStrip, StrategyRadar, WaterChart } from "./components/Charts";
 import { analyzePlace, CROP_LIST, geocodePlace, ROADMAP, SOURCES } from "./engine/analyze";
 import type { Account } from "./auth";
 import Logo from "./Logo";
 
-function tx(lang: Lang, fr: string, en: string) {
-  return lang === "en" ? en : fr;
-}
-
-const GLOSSARY: Record<Lang, { term: string; text: string }[]> = {
-  fr: [
-    { term: "Évapotranspiration", text: "Eau qui quitte le sol et les plantes vers l’air. Ici elle est estimée (méthode de Hargreaves), pas mesurée dans votre champ." },
-    { term: "Anomalie", text: "Écart entre une année et la moyenne des années précédentes. Une anomalie positive de pluie veut dire un mois plus mouillé que d’habitude." },
-    { term: "Bilan hydrique", text: "Pluie moins évapotranspiration, mois par mois. Négatif : le mois est plutôt sec pour les cultures." },
-    { term: "Risque de gel", text: "Nombre moyen de jours où la température descend à 0 °C ou en dessous. Beaucoup de cultures tropicales ne le supportent pas." },
-  ],
-  en: [
-    { term: "Evapotranspiration", text: "Water leaving the soil and plants into the air. Here it is estimated (Hargreaves), not measured in your field." },
-    { term: "Anomaly", text: "How a year differs from the long-term average. A positive rain anomaly means a wetter month than usual." },
-    { term: "Water balance", text: "Rain minus evapotranspiration, month by month. Negative means a rather dry month for crops." },
-    { term: "Frost risk", text: "Average number of days at or below 0 °C. Many tropical crops cannot tolerate that." },
-  ],
+const labels: Record<Lang, Record<string, string>> = {
+  en: { water: "Save water", erosion: "Limit erosion", organic_matter: "Organic matter", nitrogen: "Soil nitrogen", income: "Income", pest_break: "Break pest cycles", fodder: "Fodder" },
+  fr: { water: "Économiser l’eau", erosion: "Limiter l’érosion", organic_matter: "Matière organique", nitrogen: "Azote du sol", income: "Revenu", pest_break: "Couper les ravageurs", fodder: "Fourrage" },
 };
-
-const PRIORITY_LABEL: Record<Lang, Record<string, string>> = {
-  fr: {
-    water: "Économiser l’eau", erosion: "Limiter l’érosion", organic_matter: "Matière organique",
-    nitrogen: "Azote du sol", income: "Revenu", pest_break: "Couper les ravageurs", fodder: "Fourrage",
-  },
-  en: {
-    water: "Save water", erosion: "Limit erosion", organic_matter: "Organic matter",
-    nitrogen: "Soil nitrogen", income: "Income", pest_break: "Break pest cycles", fodder: "Fodder",
-  },
+const glossary: Record<Lang, { term: string; text: string }[]> = {
+  en: [{ term: "Evapotranspiration", text: "Water leaving soil and plants. Estimated with Hargreaves, not measured in the field." }, { term: "Water balance", text: "Rain minus estimated evapotranspiration, month by month." }, { term: "Frost risk", text: "Average days at or below 0 °C; many tropical crops cannot tolerate this." }],
+  fr: [{ term: "Évapotranspiration", text: "Eau qui quitte le sol et les plantes. Estimée par Hargreaves, pas mesurée dans le champ." }, { term: "Bilan hydrique", text: "Pluie moins évapotranspiration estimée, mois par mois." }, { term: "Risque de gel", text: "Nombre moyen de jours à 0 °C ou moins ; beaucoup de cultures tropicales ne le supportent pas." }],
 };
+const tx = (lang: Lang, fr: string, en: string) => lang === "en" ? en : fr;
 
 export default function App({ user, onLogout }: { user: Account; onLogout: () => void }) {
   const [lang, setLang] = useState<Lang>("en");
+  const [pane, setPane] = useState<"place" | "field" | "result" | "alerts">("place");
+  const [menu, setMenu] = useState(false);
+  const [place, setPlace] = useState<Place>({ name: "", lat: 15, lon: 10 });
+  const [marked, setMarked] = useState(false);
+  const [zoom, setZoom] = useState(2);
+  const [query, setQuery] = useState("");
+  const [hits, setHits] = useState<Place[]>([]);
+  const [parcel, setParcel] = useState<Parcel>({ current_rotation: ["maize", "cassava"], soil: "sandy", slope: "moderate", irrigation: false, rainy_seasons: 2 });
+  const [priorities, setPriorities] = useState<Priorities>({ water: 7, erosion: 5, organic_matter: 8, nitrogen: 9, income: 6, pest_break: 5, fodder: 2 });
+  const [scenario, setScenario] = useState<Scenario>({ precip_delta_pct: 0, temp_delta_c: 0 });
+  const [result, setResult] = useState<Analyze | null>(null);
+  const [tab, setTab] = useState<"results" | "climate" | "sources" | "roadmap">("results");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [openId, setOpenId] = useState("baseline");
+  const crops = CROP_LIST;
+
+  function pickPlace(next: Place) { setPlace(next); setMarked(true); setZoom(16); setHits([]); setQuery(""); }
+  async function search(event: React.FormEvent) {
+    event.preventDefault();
+    if (!query.trim()) return;
+    try { setHits(await geocodePlace(query.trim())); } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+  }
+  async function run() {
+    setBusy(true); setError("");
+    try {
+      const data = await analyzePlace({ lat: place.lat, lon: place.lon, parcel, priorities, scenario, lang });
+      setResult(data); setOpenId(data.strategies[0]?.id ?? "baseline"); setPane("result");
+    } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    finally { setBusy(false); }
+  }
+  const score = (value: number) => Math.round(value * 100);
+  const confidence = (value: string) => lang === "en" ? ({ faible: "low", moyen: "medium", élevé: "high" }[value] ?? value) : value;
+  const alertText = () => {
+    if (!result) return tx(lang, "Analysez d’abord un lieu pour préparer le message.", "Analyse a place first to prepare the message.");
+    const best = [...result.strategies].sort((a, b) => b.total_score - a.total_score)[0];
+    const rain = Math.round(result.climate.climatology.reduce((sum, month) => sum + (month.precip_mm ?? 0), 0));
+    const temps = result.climate.climatology.map(month => month.t2m).filter((value): value is number => value != null);
+    const temp = temps.length ? (temps.reduce((sum, value) => sum + value, 0) / temps.length).toFixed(1) : null;
+    return lang === "en"
+      ? [`Best-scoring rotation: ${best?.sequence_names.join(" → ") ?? ""} (${score(best?.total_score ?? 0)}/100).`, `Usual 2011–2024 climate: about ${rain} mm of rain${temp ? `, ${temp} °C` : ""}.`, "This is the climate habit of the place, not a forecast."].join("\n")
+      : [`Rotation la mieux notée : ${best?.sequence_names.join(" → ") ?? ""} (${score(best?.total_score ?? 0)}/100).`, `Climat habituel 2011–2024 : environ ${rain} mm de pluie${temp ? `, ${temp} °C` : ""}.`, "C’est le climat habituel du lieu, pas une prévision."].join("\n");
+  };
+
+  return <div className="min-h-screen">
+    <header className="border-b border-stone-200 bg-soil-900 text-soil-50"><div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+      <div className="flex items-center gap-3"><Logo className="h-11 w-11"/><div><p className="text-xs uppercase tracking-widest text-amber-200">NASA Space Apps · Field Shift</p><h1 className="text-2xl font-semibold">TerraShift</h1><p className="hidden text-sm text-stone-200 sm:block">{tx(lang,"Comparer des rotations selon le sol et le climat.","Compare crop rotations for soil and climate.")}</p></div></div>
+      <div className="flex items-center gap-2"><span className="hidden max-w-[8rem] truncate text-sm text-amber-100 sm:inline">{user.name}</span><button className="rounded-full border border-stone-400 px-3 py-2 text-sm" onClick={() => setLang(lang === "fr" ? "en" : "fr")}>{lang === "fr" ? "EN" : "FR"}</button><button className="hidden rounded-full bg-white px-3 py-2 text-sm text-soil-900 md:inline" onClick={onLogout}>{tx(lang,"Sortir","Log out")}</button><button className="rounded-full bg-white px-4 py-2 text-sm text-soil-900 md:hidden" onClick={() => setMenu(true)}>Menu</button></div>
+    </div></header>
+    <div className="bg-amber-50"><p className="mx-auto max-w-5xl px-4 py-3 text-sm text-amber-950"><strong>{tx(lang,"À valider localement. ","Check locally. ")}</strong>{tx(lang,"Cet outil aide à comparer des options, il ne remplace pas un conseiller agricole.","This tool helps compare options; it does not replace a local agricultural adviser.")}</p></div>
+    <main className="mx-auto grid max-w-5xl gap-4 px-4 py-4 pb-24 md:pb-4">
+      <section className={`rounded-2xl bg-white p-3 shadow-sm ${pane === "place" ? "block" : "hidden md:block"}`}>
+        <div className="mb-2 flex flex-wrap items-end justify-between gap-2 px-1"><h2 className="text-lg font-semibold">{tx(lang,"Où se trouve la parcelle ?","Where is the field?")}</h2><p className="text-sm text-stone-600">{marked ? `${place.name} · ${place.lat.toFixed(2)}°, ${place.lon.toFixed(2)}°` : tx(lang,"Choisissez un point sur la carte ou cherchez un lieu","Choose a map point or search for a place")}</p></div>
+        <MapPicker lat={place.lat} lon={place.lon} zoom={zoom} marked={marked} onPick={(lat, lon) => pickPlace({ name: tx(lang,"Point choisi sur la carte","Map location"), lat, lon })}/>
+        <form onSubmit={search} className="mt-3 flex gap-2"><input value={query} onChange={event => setQuery(event.target.value)} placeholder={tx(lang,"Rechercher un village, une ville…","Search a village or city…")} className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-3 text-base"/><button className="rounded-lg border border-leaf-700 px-4 py-2 text-leaf-700">{tx(lang,"Chercher","Search")}</button></form>
+        {hits.length > 0 && <ul className="mt-2 divide-y rounded-lg border border-stone-200">{hits.map(hit => <li key={`${hit.lat}-${hit.lon}`}><button className="w-full px-3 py-2 text-left text-sm hover:bg-soil-50" type="button" onClick={() => pickPlace(hit)}>{hit.name}</button></li>)}</ul>}
+        <button type="button" disabled={!marked || busy} className="mt-3 w-full rounded-lg bg-leaf-700 px-4 py-3 text-base text-white disabled:opacity-40" onClick={run}>{busy ? tx(lang,"Analyse en cours…","Analysing…") : tx(lang,"Analyser ce lieu avec NASA POWER","Analyse this place with NASA POWER")}</button>
+      </section>
+      <section className={`rounded-2xl bg-white p-4 shadow-sm ${pane === "field" ? "block" : "hidden md:block"}`}>
+        <h2 className="text-lg font-semibold">{tx(lang,"Votre parcelle","Your field")}</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="text-sm">{tx(lang,"Sol (votre observation)","Soil (your observation)")}<select className="mt-1 w-full rounded-lg border px-2 py-2" value={parcel.soil} onChange={e => setParcel({...parcel,soil:e.target.value as Parcel["soil"]})}><option value="sandy">{tx(lang,"Sableux","Sandy")}</option><option value="loam">{tx(lang,"Limoneux","Loam")}</option><option value="clay">{tx(lang,"Argileux","Clay")}</option></select></label>
+          <label className="text-sm">{tx(lang,"Pente","Slope")}<select className="mt-1 w-full rounded-lg border px-2 py-2" value={parcel.slope} onChange={e => setParcel({...parcel,slope:e.target.value as Parcel["slope"]})}><option value="flat">{tx(lang,"Plate","Flat")}</option><option value="moderate">{tx(lang,"Modérée","Moderate")}</option><option value="steep">{tx(lang,"Forte","Steep")}</option></select></label>
+          <label className="text-sm">{tx(lang,"Saisons des pluies habituelles","Usual rainy seasons")}<select className="mt-1 w-full rounded-lg border px-2 py-2" value={parcel.rainy_seasons} onChange={e => setParcel({...parcel,rainy_seasons:Number(e.target.value) as 1|2})}><option value={1}>1</option><option value={2}>2</option></select></label>
+          <label className="mt-6 flex items-center gap-2 text-sm"><input type="checkbox" checked={parcel.irrigation} onChange={e => setParcel({...parcel,irrigation:e.target.checked})}/>{tx(lang,"Irrigation disponible","Irrigation available")}</label>
+        </div>
+        <p className="mt-4 text-sm font-medium">{tx(lang,"Rotation actuelle","Current rotation")}</p><div className="mt-2 space-y-2">
+          {parcel.current_rotation.map((id,index)=><div key={`${id}-${index}`} className="flex gap-2"><select className="min-w-0 flex-1 rounded-lg border px-2 py-2" value={id} onChange={e=>{const next=[...parcel.current_rotation];next[index]=e.target.value;setParcel({...parcel,current_rotation:next})}}>{crops.map(crop=><option key={crop.id} value={crop.id}>{cropName(crop,lang)}</option>)}</select>{parcel.current_rotation.length>1&&<button type="button" className="rounded-lg border px-3" onClick={()=>setParcel({...parcel,current_rotation:parcel.current_rotation.filter((_,i)=>i!==index)})}>×</button>}</div>)}
+          {parcel.current_rotation.length<4&&crops[0]&&<button type="button" className="text-sm text-leaf-700 underline" onClick={()=>setParcel({...parcel,current_rotation:[...parcel.current_rotation,crops[0].id]})}>{tx(lang,"Ajouter une culture","Add a crop")}</button>}
+        </div><div className="mt-4 grid gap-3 sm:grid-cols-2">{PRIORITY_KEYS.map(key=><label key={key} className="text-sm"><span className="flex justify-between"><span>{labels[lang][key]}</span><span>{priorities[key]}</span></span><input className="w-full" type="range" min={0} max={10} value={priorities[key]} onChange={e=>setPriorities({...priorities,[key]:Number(e.target.value)})}/></label>)}</div>
+      </section>
+      {(error||busy||result)&&<div className={pane==="result"?"contents":"hidden md:contents"}>{error&&<p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}{busy&&<p className="text-sm text-stone-600">{tx(lang,"Lecture de NASA POWER pour ce point. La première fois peut prendre une minute.","Reading NASA POWER for this point. The first request may take a minute.")}</p>}
+        {result&&<><section className="rounded-2xl bg-leaf-700 p-4 text-white shadow-sm"><h2 className="text-sm uppercase tracking-wide text-emerald-100">{tx(lang,"En trois phrases","In three sentences")}</h2><ol className="mt-2 list-decimal space-y-2 pl-5 text-base">{result.summary.map(sentence=><li key={sentence}>{sentence}</li>)}</ol></section>
+          <nav className="flex gap-2 overflow-x-auto text-sm">{([["results",tx(lang,"Stratégies","Strategies")],["climate",tx(lang,"Climat","Climate")],["sources",tx(lang,"Données utilisées","Data used")],["roadmap",tx(lang,"Feuille de route","Roadmap")]] as const).map(([id,label])=><button key={id} type="button" onClick={()=>setTab(id)} className={`whitespace-nowrap rounded-full px-3 py-1 ${tab===id?"bg-soil-900 text-white":"bg-white"}`}>{label}</button>)}</nav>
+          {tab==="results"&&<section className="space-y-4"><div className="rounded-2xl bg-white p-4 shadow-sm"><h3 className="font-semibold">{tx(lang,"Et si le climat bouge ?","What if the climate shifts?")}</h3><label className="mt-3 block text-sm">{tx(lang,"Pluie","Rain")} {scenario.precip_delta_pct>0?"+":""}{scenario.precip_delta_pct} %<input className="w-full" type="range" min={-40} max={40} value={scenario.precip_delta_pct} onChange={e=>setScenario({...scenario,precip_delta_pct:Number(e.target.value)})}/></label><label className="mt-2 block text-sm">{tx(lang,"Température","Temperature")} {scenario.temp_delta_c>0?"+":""}{scenario.temp_delta_c} °C<input className="w-full" type="range" min={-2} max={3} step={0.5} value={scenario.temp_delta_c} onChange={e=>setScenario({...scenario,temp_delta_c:Number(e.target.value)})}/></label><p className="mt-2 text-xs text-stone-500">{tx(lang,"Le curseur recalcule la comparaison sur les données POWER de ce point.","The slider recalculates the comparison using this point’s POWER data.")}</p></div><div className="rounded-2xl bg-white p-4 shadow-sm"><h3 className="font-semibold">{tx(lang,"Comparaison","Comparison")}</h3><StrategyRadar strategies={result.strategies} lang={lang}/></div>{result.strategies.map(strategy=><article key={strategy.id} className="rounded-2xl bg-white p-4 shadow-sm"><button type="button" className="flex w-full items-start justify-between gap-3 text-left" onClick={()=>setOpenId(openId===strategy.id?"":strategy.id)}><span><span className="font-semibold">{strategy.name}</span><span className="mt-1 block text-sm text-stone-600">{strategy.sequence_names.join(" → ")}</span></span><span className="text-right text-sm"><span className="block text-xl font-semibold">{score(strategy.total_score)}</span>{tx(lang,"confiance","confidence")} {confidence(strategy.confidence)}</span></button>{openId===strategy.id&&<div className="mt-3 space-y-3 text-sm"><p>{strategy.why}</p><SeasonStrip strategy={strategy} lang={lang}/><div><h4 className="font-medium">{tx(lang,"Données POWER","POWER data")}</h4><ul className="mt-1 list-disc space-y-1 pl-5">{strategy.evidence.map(item=><li key={item.finding}><strong>{item.variable}.</strong> {item.finding}</li>)}</ul></div><div><h4 className="font-medium">{tx(lang,"Intérêts","Benefits")}</h4><ul className="mt-1 list-disc pl-5">{strategy.benefits.map(item=><li key={item}>{item}</li>)}</ul></div><div><h4 className="font-medium">{tx(lang,"Ce qui manque","What is missing")}</h4><ul className="mt-1 list-disc pl-5">{strategy.info_gaps.map(item=><li key={item}>{item}</li>)}</ul></div>{strategy.local_risks.length>0&&<div><h4 className="font-medium">{tx(lang,"Risques à vérifier","Risks to check")}</h4><ul className="mt-1 list-disc pl-5">{strategy.local_risks.map(item=><li key={item}>{item}</li>)}</ul></div>}</div>}</article>)}{result.excluded_crops.length>0&&<div className="rounded-2xl bg-white p-4 text-sm shadow-sm"><h3 className="font-semibold">{tx(lang,"Cultures écartées par le climat","Crops ruled out by climate")}</h3><ul className="mt-2 space-y-1">{result.excluded_crops.slice(0,8).map(crop=><li key={crop.id}>{crop.name} — {crop.reason}</li>)}</ul></div>}</section>}
+          {tab==="climate"&&<section className="space-y-4"><div className="rounded-2xl bg-white p-4 shadow-sm"><h3 className="font-semibold">{tx(lang,"Année moyenne","Average year")} · {result.climate.period}</h3><p className="mt-1 text-xs text-stone-500">{result.climate.source} · ETP {result.climate.pet_method}</p><ClimateChart rows={result.climate.climatology} lang={lang}/><div className="mt-3 grid gap-2 text-sm sm:grid-cols-3"><p>{tx(lang,"Jours > 35 °C / an","Days above 35 °C / year")}: <strong>{result.climate.extremes.heat_days_per_year?.toFixed(1)}</strong></p><p>{tx(lang,"Jours de gel / an","Frost days / year")}: <strong>{result.climate.extremes.frost_days_per_year?.toFixed(1)}</strong></p><p>{tx(lang,"Jours ≥ 50 mm / an","Days ≥ 50 mm / year")}: <strong>{result.climate.extremes.extreme_rain_days_per_year?.toFixed(1)}</strong></p></div></div><div className="rounded-2xl bg-white p-4 shadow-sm"><h3 className="font-semibold">{tx(lang,"Bilan hydrique","Water balance")}</h3><WaterChart rows={result.climate.water_balance} lang={lang}/><p className="text-xs text-stone-500">{result.climate.season.rule}</p></div><div className="rounded-2xl bg-white p-4 shadow-sm"><h3 className="font-semibold">{tx(lang,"Calendrier de la rotation actuelle","Current rotation calendar")}</h3>{result.strategies[0]&&<SeasonStrip strategy={result.strategies[0]} lang={lang}/>}</div><div className="rounded-2xl bg-white p-4 text-sm shadow-sm"><h3 className="font-semibold">{tx(lang,"Mots utiles","Useful terms")}</h3><dl className="mt-2 space-y-2">{glossary[lang].map(item=><div key={item.term}><dt className="font-medium">{item.term}</dt><dd className="text-stone-700">{item.text}</dd></div>)}</dl></div></section>}
+          {tab==="sources"&&<section className="rounded-2xl bg-white p-4 text-sm shadow-sm"><h3 className="font-semibold">{tx(lang,"Données utilisées","Data in use")}</h3><p className="mt-1 text-stone-600">{SOURCES.note}</p><ul className="mt-3 space-y-3">{SOURCES.sources.map(row=><li key={row.variable} className="border-b border-stone-100 pb-2"><p className="font-medium">{row.variable}</p><p>{row.meaning}</p><p className="text-xs text-stone-500">{row.source} · {row.resolution} · {row.period} · {row.status}</p></li>)}</ul><h4 className="mt-4 font-medium">{tx(lang,"Hypothèses","Assumptions")}</h4><ul className="mt-1 list-disc pl-5">{result.assumptions.map(item=><li key={item}>{item}</li>)}</ul></section>}
+          {tab==="roadmap"&&<section className="rounded-2xl bg-white p-4 text-sm shadow-sm"><h3 className="font-semibold">{tx(lang,"Feuille de route","Roadmap")}</h3><p className="mt-1 text-stone-600">{tx(lang,"Ces sources ne sont pas connectées. Aucun chiffre n’en provient.","These sources are not connected; no figures come from them.")}</p><ul className="mt-3 space-y-3">{ROADMAP.map(item=><li key={item.id}><p className="font-medium">{item.name} · {item.status}</p><p>{item.role}</p></li>)}</ul></section>}
+        </>}
+      </div>}
+      <section className={`rounded-2xl bg-white p-4 shadow-sm ${pane==="alerts"?"block":"hidden md:block"}`}><h2 className="text-lg font-semibold">{tx(lang,"Alerte préparée","Prepared alert")}</h2><p className="mt-1 text-sm text-stone-600">{user.phone?tx(lang,`Numéro du compte : ${user.phone}. Aucun SMS n’est envoyé.`,`Account phone: ${user.phone}. No SMS is sent.`):tx(lang,"Aucun numéro de téléphone sur ce compte.","No phone number is set on this account.")}</p><div className="mt-4 rounded-2xl bg-soil-50 p-4 text-sm"><p className="text-xs uppercase tracking-wide text-stone-500">{tx(lang,"Message préparé","Prepared message")}</p><p className="mt-2 whitespace-pre-line">{alertText()}</p></div></section>
+    </main>
+    {menu&&<div className="fixed inset-0 z-40 flex flex-col bg-soil-900 px-6 pb-8 pt-6 text-soil-50 md:hidden"><div className="flex items-center justify-between"><p className="text-sm text-amber-100">{user.name}</p><button type="button" className="rounded-full border border-stone-400 px-4 py-2" onClick={()=>setMenu(false)}>{tx(lang,"Fermer","Close")}</button></div><nav className="mt-8 flex flex-col gap-2 text-2xl">{([["place",tx(lang,"Lieu","Place")],["field",tx(lang,"Parcelle","Field")],["result",tx(lang,"Résultat","Result")],["alerts",tx(lang,"Alertes","Alerts")]] as const).map(([id,label])=><button key={id} type="button" className="rounded-2xl px-2 py-3 text-left" onClick={()=>{setPane(id);setMenu(false)}}>{label}</button>)}</nav><div className="mt-auto flex gap-2"><button type="button" className="flex-1 rounded-full border border-stone-400 py-3" onClick={()=>setLang(lang==="fr"?"en":"fr")}>{lang==="fr"?"English":"Français"}</button><button type="button" className="flex-1 rounded-full bg-white py-3 text-soil-900" onClick={onLogout}>{tx(lang,"Sortir","Log out")}</button></div></div>}
+    <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-stone-200 bg-white pb-[env(safe-area-inset-bottom)] text-sm md:hidden">{([["place",tx(lang,"Lieu","Place")],["field",tx(lang,"Parcelle","Field")],["result",tx(lang,"Résultat","Result")],["alerts",tx(lang,"Alertes","Alerts")]] as const).map(([id,label])=><button key={id} type="button" className={`py-3 ${pane===id?"font-semibold text-leaf-700":"text-stone-500"}`} onClick={()=>setPane(id)}>{label}</button>)}</nav>
+  </div>;
+}
